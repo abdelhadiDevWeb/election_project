@@ -45,7 +45,7 @@ export default function Header() {
 
         <div className="flex items-center gap-3 pl-2">
           <div className="flex flex-col items-end">
-            <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Admin Central</span>
+            <span className="text-sm font-semibold text-zinc-700 dark:text-white">Admin Central</span>
             <span className="text-[10px] text-algerian-green dark:text-algerian-green-light font-medium uppercase tracking-wider">Super Admin</span>
           </div>
           <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-algerian-green to-algerian-green-light flex items-center justify-center text-white shadow-md">

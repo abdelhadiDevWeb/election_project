@@ -242,14 +242,14 @@ export default function EntitesPolitiques() {
         </form>
       </Modal>
 
-      <div className="flex gap-2 p-1.5 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl w-fit">
+      <div className="flex gap-2 p-1.5 rounded-2xl w-fit tab-container">
         <button
           onClick={() => setActiveTab("parties")}
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
             activeTab === "parties"
-              ? "bg-white dark:bg-zinc-800 text-algerian-green shadow-sm"
-              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              ? "bg-white text-algerian-green shadow-sm tab-active"
+              : "text-zinc-500 hover:text-zinc-700"
           )}
         >
           <Flag size={18} />
@@ -260,8 +260,8 @@ export default function EntitesPolitiques() {
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
             activeTab === "candidates"
-              ? "bg-white dark:bg-zinc-800 text-algerian-green shadow-sm"
-              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              ? "bg-white text-algerian-green shadow-sm tab-active"
+              : "text-zinc-500 hover:text-zinc-700"
           )}
         >
           <UserSquare size={18} />
@@ -281,7 +281,7 @@ export default function EntitesPolitiques() {
             <DataTable 
               columns={[
                 { header: "Sigle", accessor: "short", render: (val) => (
-                  <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-black text-algerian-green">
+                  <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center font-black text-algerian-green border border-transparent dark:border-zinc-800">
                     {val}
                   </div>
                 )},
@@ -307,7 +307,7 @@ export default function EntitesPolitiques() {
               columns={[
                 { header: "Candidat", accessor: "full_name", render: (val, row: any) => (
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-400">
+                    <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-400">
                       {row.fav ? <Flag size={20} className="text-algerian-green fill-algerian-green" /> : <UserSquare size={20} />}
                     </div>
                     <div className="flex flex-col">
@@ -319,7 +319,7 @@ export default function EntitesPolitiques() {
                 { header: "Parti", accessor: "party", render: (val) => (
                   <span className={cn(
                     "px-2.5 py-1 rounded-lg text-xs font-bold",
-                    val === 'Indépendant' || !val ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-800" : "bg-algerian-green/10 text-algerian-green"
+                    val === 'Indépendant' || !val ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-950" : "bg-algerian-green/10 text-algerian-green"
                   )}>
                     {val || 'Indépendant'}
                   </span>

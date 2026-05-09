@@ -8,20 +8,24 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --sidebar-bg: rgba(255, 255, 255, 0.8);
-  --card-bg: rgba(255, 255, 255, 0.7);
+  --background: #f9fafb; /* zinc-50 */
+  --foreground: #09090b; /* zinc-950 */
+  --sidebar-bg: rgba(255, 255, 255, 0.95);
+  --card-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(0, 98, 51, 0.1);
   --glass-blur: blur(12px);
+  --input-bg: #ffffff;
+  --input-border: #e4e4e7; /* zinc-200 */
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --sidebar-bg: rgba(15, 23, 42, 0.8);
-  --card-bg: rgba(30, 41, 59, 0.7);
+  --background: #000000; /* Pure black background */
+  --foreground: #ffffff; /* Pure white text */
+  --sidebar-bg: rgba(9, 9, 11, 0.98);
+  --card-bg: #09090b; /* zinc-950 */
   --glass-border: rgba(255, 255, 255, 0.1);
+  --input-bg: #111111;
+  --input-border: #27272a;
 }
 
 body {
@@ -34,6 +38,101 @@ body {
 
 .dark body {
   background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+}
+
+/* Global Dark Mode Overrides for Inputs and Selects */
+input, select, textarea {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--foreground) !important;
+}
+
+.dark input::placeholder, .dark textarea::placeholder {
+  color: #a1a1aa !important; /* zinc-400 */
+}
+
+/* Global Dark Mode for Tables and Buttons */
+.dark table thead tr {
+  background-color: #09090b !important; /* zinc-950 */
+}
+
+.dark table thead th {
+  color: #ffffff !important;
+  border-bottom: 1px solid #27272a !important;
+}
+
+.dark table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .glass {
+  background-color: #09090b !important;
+  border-color: #27272a !important;
+}
+
+/* Force white text on dashboard numbers and labels */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark p, .dark span:not(.text-algerian-green):not(.text-algerian-red) {
+  color: #ffffff !important;
+}
+
+.dark label {
+  color: #a1a1aa !important;
+}
+
+.dark .text-zinc-500, .dark .text-zinc-400 {
+  color: #d4d4d8 !important; /* zinc-300 for labels in dark mode */
+}
+
+.dark button:not(.bg-algerian-green):not(.text-white) {
+  background-color: #111111 !important;
+  color: #ffffff !important;
+  border: 1px solid #27272a !important;
+}
+
+.dark .tab-container {
+  background-color: #000000 !important;
+  border: 1px solid #27272a !important;
+}
+
+.dark .tab-active {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  border: 1px solid #3f3f46 !important;
+}
+
+/* Force dark backgrounds on icons, avatars, and containers */
+.dark [class*="bg-zinc-100"], 
+.dark [class*="bg-white"],
+.dark [class*="bg-zinc-50"],
+.dark [class*="bg-zinc-200"],
+.dark [class*="bg-zinc-50/30"] {
+  background-color: #09090b !important;
+}
+
+/* Ensure the pagination footer and table containers are pure black */
+.dark .pagination-footer,
+.dark table + div,
+.dark .glass {
+  background-color: #000000 !important;
+  border-color: #27272a !important;
+}
+
+/* Style for status badges in dark mode */
+.dark .badge-actif {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.dark .badge-expire {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Force icons to inherit correct colors */
+.dark .text-zinc-400, .dark .text-zinc-500 {
+  color: #a1a1aa !important;
 }
 
 .glass {

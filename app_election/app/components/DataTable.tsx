@@ -79,13 +79,13 @@ export default function DataTable({ columns, data, title, onEdit, onDelete }: Da
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
+              <tr className="bg-zinc-50/50 border-b border-zinc-200 dark:border-zinc-800">
                 {columns.map((col, i) => (
-                  <th key={i} className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  <th key={i} className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
                     {col.header}
                   </th>
                 ))}
-                {(onEdit || onDelete) && <th className="px-6 py-4 text-[11px] font-bold uppercase text-right text-zinc-500 dark:text-zinc-400">Actions</th>}
+                {(onEdit || onDelete) && <th className="px-6 py-4 text-[11px] font-bold uppercase text-right text-zinc-500">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -133,7 +133,7 @@ export default function DataTable({ columns, data, title, onEdit, onDelete }: Da
           </table>
         </div>
         
-        <div className="px-6 py-4 bg-zinc-50/30 dark:bg-zinc-800/30 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/30 dark:bg-[#09090b] pagination-footer">
           <p className="text-xs text-zinc-500">
             Affichage de <span className="font-bold">{Math.min(startIndex + 1, filteredData.length)}</span> à <span className="font-bold">{Math.min(startIndex + rowsPerPage, filteredData.length)}</span> sur <span className="font-bold">{filteredData.length}</span> entrées
           </p>
@@ -141,7 +141,7 @@ export default function DataTable({ columns, data, title, onEdit, onDelete }: Da
             <button 
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => prev - 1)}
-              className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 disabled:opacity-30 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 disabled:opacity-30 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
@@ -162,7 +162,7 @@ export default function DataTable({ columns, data, title, onEdit, onDelete }: Da
                       "w-8 h-8 rounded-lg text-xs font-bold transition-all",
                       currentPage === pageNum 
                         ? "bg-algerian-green text-white shadow-lg shadow-algerian-green/20" 
-                        : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
+                        : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 dark:border dark:border-zinc-800"
                     )}
                   >
                     {pageNum}
@@ -174,7 +174,7 @@ export default function DataTable({ columns, data, title, onEdit, onDelete }: Da
             <button 
               disabled={currentPage === totalPages || totalPages === 0}
               onClick={() => setCurrentPage(prev => prev + 1)}
-              className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 disabled:opacity-30 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 disabled:opacity-30 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
             >
               <ChevronRight size={16} />
             </button>

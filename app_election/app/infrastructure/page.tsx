@@ -292,7 +292,7 @@ export default function InfrastructureSetup() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 p-1.5 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl w-fit">
+      <div className="flex gap-2 p-1.5 bg-zinc-100 rounded-2xl w-fit tab-container">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -300,8 +300,8 @@ export default function InfrastructureSetup() {
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
               activeTab === tab.id
-                ? "bg-white dark:bg-zinc-800 text-algerian-green shadow-sm"
-                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                ? "bg-white text-algerian-green shadow-sm tab-active"
+                : "text-zinc-500 hover:text-zinc-700"
             )}
           >
             <tab.icon size={18} />

@@ -61,7 +61,7 @@ export default function ValidationResults() {
               Écarts Détectés (2)
             </div>
           </div>
-          <button className="h-10 px-6 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-bold hover:bg-zinc-50 transition-all flex items-center gap-2">
+          <button className="h-10 px-6 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm font-bold hover:bg-zinc-50 transition-all flex items-center gap-2">
             <RotateCcw size={16} />
             Réinitialiser
           </button>
@@ -84,7 +84,7 @@ export default function ValidationResults() {
             </button>
           </div>
 
-          <div className="p-4 bg-zinc-800/50 border-b border-zinc-700 flex items-center justify-between">
+          <div className="p-4 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
             <div className="flex items-center gap-2 text-white">
               <ImageIcon size={16} />
               <span className="text-xs font-bold uppercase tracking-widest">Image du Procès-Verbal Scanné</span>
@@ -146,17 +146,17 @@ export default function ValidationResults() {
 
         {/* Right Side: Data Verification */}
         <div className="w-[450px] glass rounded-3xl flex flex-col overflow-hidden">
-          <div className="p-6 bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="p-6 bg-zinc-50/50 dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800">
             <div className="flex items-center gap-2 mb-4">
               <FileText size={18} className="text-algerian-green" />
               <h2 className="font-bold">Vérification de Saisie</h2>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white dark:bg-zinc-800 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+              <div className="bg-white dark:bg-zinc-950 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800">
                 <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-1">Total Voix</p>
                 <p className="text-xl font-black text-algerian-green">672</p>
               </div>
-              <div className="bg-white dark:bg-zinc-800 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+              <div className="bg-white dark:bg-zinc-950 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800">
                 <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-1">Inscrits</p>
                 <p className="text-xl font-black">800</p>
               </div>
@@ -178,7 +178,7 @@ export default function ValidationResults() {
                     "grid grid-cols-12 gap-2 p-3 rounded-2xl border transition-all duration-300",
                     pv.status === 'mismatch' 
                       ? "bg-algerian-red/[0.03] border-algerian-red/20 shadow-[0_0_15px_rgba(210,16,52,0.05)]" 
-                      : "bg-white dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700"
+                      : "bg-white dark:bg-zinc-950 border-zinc-100 dark:border-zinc-800"
                   )}
                 >
                   <div className="col-span-6 flex flex-col justify-center">
@@ -216,7 +216,7 @@ export default function ValidationResults() {
             </div>
           </div>
 
-          <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
+          <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950">
              <div className="flex items-center justify-between text-sm mb-4">
                 <span className="text-zinc-500 font-medium">Auto-Validation OCR</span>
                 <span className="font-bold text-emerald-600">Confiance 84%</span>

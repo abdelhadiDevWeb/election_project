@@ -276,7 +276,7 @@ export default function GestionAcces() {
       </Modal>
 
       {/* Tabs */}
-      <div className="flex gap-2 p-1.5 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl w-fit">
+      <div className="flex gap-2 p-1.5 bg-zinc-100 rounded-2xl w-fit tab-container">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -284,8 +284,8 @@ export default function GestionAcces() {
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
               activeTab === tab.id
-                ? "bg-white dark:bg-zinc-800 text-algerian-green shadow-sm"
-                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                ? "bg-white text-algerian-green shadow-sm tab-active"
+                : "text-zinc-500 hover:text-zinc-700"
             )}
           >
             <tab.icon size={18} />
@@ -307,7 +307,7 @@ export default function GestionAcces() {
               columns={[
                 { header: "Nom Complet", accessor: "name", render: (val, row) => (
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs">
+                    <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center text-zinc-400 font-bold text-xs border border-transparent dark:border-zinc-800">
                       {val.charAt(0)}
                     </div>
                     <div className="flex flex-col">
@@ -322,7 +322,7 @@ export default function GestionAcces() {
                 { header: "Statut", accessor: "status", render: (val) => (
                   <span className={cn(
                     "px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider",
-                    val === 'Actif' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                    val === 'Actif' ? "badge-actif" : "badge-expire"
                   )}>
                     {val}
                   </span>

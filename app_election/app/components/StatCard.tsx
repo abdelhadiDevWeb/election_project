@@ -24,7 +24,7 @@ export default function StatCard({ title, value, icon: Icon, trend, className }:
     >
       <div className="space-y-3">
         <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{title}</p>
-        <h3 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{value}</h3>
+        <h3 className="text-3xl font-bold tracking-tight">{value}</h3>
         
         {trend && (
           <div className="flex items-center gap-2">

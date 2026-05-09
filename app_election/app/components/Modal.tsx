@@ -47,7 +47,7 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             ref={modalRef}
             className={cn(
-              "relative w-full max-w-lg glass rounded-3xl shadow-2xl overflow-hidden flex flex-col bg-white dark:bg-zinc-900",
+              "relative w-full max-w-lg glass rounded-3xl shadow-2xl overflow-hidden flex flex-col",
               className
             )}
           >

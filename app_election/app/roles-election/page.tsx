@@ -178,35 +178,12 @@ export default function RolesElection() {
         </form>
       </Modal>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass rounded-3xl p-6 border border-amber-500/20 bg-amber-500/5">
-           <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 mb-4">
-              <ShieldAlert size={20} />
-           </div>
-           <h3 className="font-bold text-sm mb-1">Expiration Automatique</h3>
-           <p className="text-xs text-zinc-500">Tous les accès temporaires expirent à H+2 après la clôture des bureaux.</p>
-        </div>
-        <div className="glass rounded-3xl p-6 border border-algerian-green/20 bg-algerian-green/5">
-           <div className="h-10 w-10 rounded-xl bg-algerian-green/10 flex items-center justify-center text-algerian-green mb-4">
-              <QrCode size={20} />
-           </div>
-           <h3 className="font-bold text-sm mb-1">Authentification QR</h3>
-           <p className="text-xs text-zinc-500">Les observateurs peuvent utiliser le code généré pour se connecter via l'application mobile.</p>
-        </div>
-        <div className="glass rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800">
-           <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 mb-4">
-              <Users size={20} />
-           </div>
-           <h3 className="font-bold text-sm mb-1">Volume Actif</h3>
-           <p className="text-xs text-zinc-500">Actuellement <span className="font-bold text-algerian-green">4,210</span> accès temporaires sont actifs sur le territoire.</p>
-        </div>
-      </div>
 
       <DataTable 
         columns={[
           { header: "Personnel", accessor: "name", render: (val) => (
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+              <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center text-zinc-400 border border-transparent dark:border-zinc-800">
                 <Calendar size={14} />
               </div>
               <span className="font-bold">{val}</span>
@@ -215,14 +192,14 @@ export default function RolesElection() {
           { header: "Fonction", accessor: "role" },
           { header: "Affectation", accessor: "location" },
           { header: "Code d'Accès", accessor: "code", render: (val) => (
-            <code className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded font-mono text-xs text-algerian-green font-bold">
+            <code className="bg-zinc-100 dark:bg-zinc-950 px-2 py-1 rounded font-mono text-xs text-algerian-green font-bold border border-transparent dark:border-zinc-800">
               {val}
             </code>
           )},
           { header: "Statut", accessor: "status", render: (val) => (
             <span className={cn(
               "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider",
-              val === 'Actif' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+              val === 'Actif' ? "badge-actif" : "badge-expire"
             )}>
               {val}
             </span>
