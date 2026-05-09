@@ -6,7 +6,9 @@ import {
   ChevronLeft, 
   ChevronRight, 
   MoreVertical,
-  Filter
+  Filter,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,19 +22,19 @@ interface DataTableProps {
   columns: Column[];
   data: any[];
   title?: string;
+  onEdit?: (row: any) => void;
+  onDelete?: (row: any) => void;
 }
 
-export default function DataTable({ columns, data, title }: DataTableProps) {
+export default function DataTable({ columns, data, title, onEdit, onDelete }: DataTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredData = data.filter((row) => {
     const searchStr = searchTerm.toLowerCase();
-    // Search in all columns defined in the columns prop
     return columns.some(col => {
       const val = row[col.accessor];
       return val && val.toString().toLowerCase().includes(searchStr);
     }) || 
-    // Also fallback to searching all string/number values in the row
     Object.values(row).some(val => 
       (typeof val === 'string' || typeof val === 'number') && 
       val.toString().toLowerCase().includes(searchStr)
@@ -71,7 +73,7 @@ export default function DataTable({ columns, data, title }: DataTableProps) {
                     {col.header}
                   </th>
                 ))}
-                <th className="px-6 py-4"></th>
+                {(onEdit || onDelete) && <th className="px-6 py-4 text-[11px] font-bold uppercase text-right text-zinc-500 dark:text-zinc-400">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -82,11 +84,30 @@ export default function DataTable({ columns, data, title }: DataTableProps) {
                       {col.render ? col.render(row[col.accessor], row) : row[col.accessor]}
                     </td>
                   ))}
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-all">
-                      <MoreVertical size={16} />
-                    </button>
-                  </td>
+                  {(onEdit || onDelete) && (
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {onEdit && (
+                          <button 
+                            onClick={() => onEdit(row)}
+                            className="p-2 rounded-lg text-algerian-green/50 hover:text-algerian-green hover:bg-algerian-green/10 transition-all duration-300"
+                            title="Modifier"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button 
+                            onClick={() => onDelete(row)}
+                            className="p-2 rounded-lg text-red-500/50 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
