@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+export type ElectionScope = "national" | "wilaya" | "commun";
+
 interface DataContextType {
   wilayasData: any[];
   setWilayasData: React.Dispatch<React.SetStateAction<any[]>>;
@@ -21,6 +23,8 @@ interface DataContextType {
   setMembersData: React.Dispatch<React.SetStateAction<any[]>>;
   observersData: any[];
   setObserversData: React.Dispatch<React.SetStateAction<any[]>>;
+  electionScope: ElectionScope;
+  setElectionScope: (scope: ElectionScope) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -13174,6 +13178,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     { id: 4, name: "Leila Bekhti", role: "Observateur Bureau", center: "Centre Pasteur", desk: "02", location: "Centre Pasteur - Bureau 02", code: "TMP-112-A", status: "Actif", expires: "20:00", email: "l.bekhti@gmail.com", nin: "199516010022334455", phone: "0661223344" },
   ]);
 
+  const [electionScope, setElectionScope] = useState<ElectionScope>("national");
+
   return (
     <DataContext.Provider value={{
       wilayasData, setWilayasData,
@@ -13184,7 +13190,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       candidatesData, setCandidatesData,
       adminsData, setAdminsData,
       membersData, setMembersData,
-      observersData, setObserversData
+      observersData, setObserversData,
+      electionScope, setElectionScope
     }}>
       {children}
     </DataContext.Provider>
