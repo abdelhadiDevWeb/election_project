@@ -176,82 +176,95 @@ export default function GestionAcces() {
         }
       >
         <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto px-1">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1 col-span-2">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Nom Complet</label>
-              <input required type="text" placeholder="Ex: Mohamed Amine" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none transition-all" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Email</label>
-              <input required type="email" placeholder="m.amine@anie.dz" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Téléphone</label>
-              <input type="text" pattern="[0-9]*" inputMode="numeric" placeholder="05XX XX XX XX" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.phone} onChange={(e) => setNewUser({...newUser, phone: e.target.value.replace(/\D/g, "")})} />
-            </div>
-
-            <div className="space-y-1 col-span-2">
-              <label className="text-xs font-bold text-zinc-500 uppercase">NIN (Numéro d'Identification National)</label>
-              <input type="text" pattern="[0-9]*" inputMode="numeric" placeholder="Numéro à 18 chiffres" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.nin} onChange={(e) => setNewUser({...newUser, nin: e.target.value.replace(/\D/g, "")})} />
-            </div>
-
-            {modalMode === "admin" && (
-              <div className="space-y-1 col-span-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase">Niveau d'Administration</label>
-                <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
-                  <option value="admin_wilaya">Admin Wilaya</option>
-                  <option value="admin_baladia">Admin Commun (Baladia)</option>
-                </select>
+          {modalMode === "admin" ? (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Nom Complet</label>
+                <input required type="text" placeholder="Prénom et Nom" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
               </div>
-            )}
-
-            {modalMode === "member" && (
-              <>
-                <div className="space-y-1 col-span-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">Date de Naissance</label>
-                  <input type="date" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.birthday} onChange={(e) => setNewUser({...newUser, birthday: e.target.value})} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Email Professionnel</label>
+                  <input required type="email" placeholder="exemple@anie.dz" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} />
                 </div>
-                <div className="space-y-1 col-span-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">Admin Commun Responsable (Baladia)</label>
-                  <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.admin_commun} onChange={(e) => setNewUser({...newUser, admin_commun: e.target.value})}>
-                    <option value="Abdelkader Ben">Abdelkader Ben (Oran)</option>
-                    <option value="Ahmed Said">Ahmed Said (Alger)</option>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">N° Téléphone</label>
+                  <input required type="text" placeholder="05XX XX XX XX" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.phone} onChange={(e) => setNewUser({...newUser, phone: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">NIN (18 chiffres)</label>
+                <input required type="text" maxLength={18} pattern="[0-9]*" inputMode="numeric" placeholder="Identifiant National" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.nin} onChange={(e) => setNewUser({...newUser, nin: e.target.value.replace(/\D/g, "")})} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Rôle / Niveau</label>
+                  <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
+                    <option value="Admin Wilaya">Admin Wilaya</option>
+                    <option value="Admin Baladia">Admin Baladia</option>
+                    <option value="Super Admin">Super Admin</option>
                   </select>
                 </div>
-                <div className="space-y-1 col-span-2">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">Objectif du Membre Actif</label>
-                  <textarea className="w-full p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" rows={2} placeholder="Description de l'activité..." value={newUser.goal} onChange={(e) => setNewUser({...newUser, goal: e.target.value})}></textarea>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Wilaya de Compétence</label>
+                  <select 
+                    className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" 
+                    value={newUser.wilaya} 
+                    onChange={(e) => setNewUser({...newUser, wilaya: e.target.value})}
+                  >
+                    <option value="">Sélectionner une Wilaya</option>
+                    {useData().wilayasData.map(w => <option key={w.id} value={w.name}>{w.name}</option>)}
+                  </select>
                 </div>
-              </>
-            )}
-
-            <div className="grid grid-cols-2 gap-4 col-span-2">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500 uppercase">Wilaya</label>
-                <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.wilaya} onChange={(e) => setNewUser({...newUser, wilaya: e.target.value})}>
-                  <option value="Alger">Alger</option>
-                  <option value="Oran">Oran</option>
-                  <option value="Blida">Blida</option>
-                  <option value="Constantine">Constantine</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500 uppercase">Commune</label>
-                <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none">
-                  <option>Toutes les communes</option>
-                </select>
               </div>
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-zinc-500 uppercase">Photo / Image</label>
-            <div className="h-24 w-full border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 text-xs font-medium cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-              Cliquez pour uploader
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Nom du Membre Actif</label>
+                <input required type="text" placeholder="Prénom et Nom" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Appartenance Politique</label>
+                  <select 
+                    className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" 
+                    value={newUser.role} 
+                    onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                  >
+                    <option value="">Choisir un parti...</option>
+                    <option value="Indépendant">Indépendant</option>
+                    {useData().partiesData.map(p => <option key={p.id} value={p.short}>{p.name} ({p.short})</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Wilaya de Résidence</label>
+                  <select 
+                    className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" 
+                    value={newUser.wilaya} 
+                    onChange={(e) => setNewUser({...newUser, wilaya: e.target.value})}
+                  >
+                    <option value="">Sélectionner une Wilaya</option>
+                    {useData().wilayasData.map(w => <option key={w.id} value={w.name}>{w.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">NIN</label>
+                  <input required type="text" maxLength={18} pattern="[0-9]*" inputMode="numeric" placeholder="18 chiffres" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.nin} onChange={(e) => setNewUser({...newUser, nin: e.target.value.replace(/\D/g, "")})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Date de Naissance</label>
+                  <input required type="date" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.birthday} onChange={(e) => setNewUser({...newUser, birthday: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Mission Assignée</label>
+                <input required type="text" placeholder="Ex: Contrôle des listes" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.goal} onChange={(e) => setNewUser({...newUser, goal: e.target.value})} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="pt-4 flex gap-3">
             <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all">Annuler</button>

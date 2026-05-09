@@ -119,61 +119,53 @@ export default function RolesElection() {
         title={editingItem ? "Modifier l'Observateur" : "Module Jour-J - Nouvel Observateur"}
       >
         <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto px-1">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1 col-span-2">
+          <div className="space-y-4">
+            <div className="space-y-1">
               <label className="text-xs font-bold text-zinc-500 uppercase">Nom Complet</label>
-              <input required type="text" placeholder="Ex: Mohamed Amine" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none transition-all" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
+              <input required type="text" placeholder="Prénom et Nom" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
             </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Email</label>
-              <input required type="email" placeholder="m.amine@anie.dz" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Téléphone</label>
-              <input type="text" pattern="[0-9]*" inputMode="numeric" placeholder="05XX XX XX XX" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" />
-            </div>
-
-            <div className="space-y-1 col-span-2">
-              <label className="text-xs font-bold text-zinc-500 uppercase">NIN (Numéro d'Identification National)</label>
-              <input type="text" pattern="[0-9]*" inputMode="numeric" placeholder="Numéro à 18 chiffres" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" />
-            </div>
-
-            <div className="space-y-1 col-span-2">
-               <label className="text-xs font-bold text-zinc-500 uppercase">Rôle Jour-J</label>
-               <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
-                <option value="obs_center">Observateur Centre</option>
-                <option value="obs_desk">Observateur Bureau</option>
-              </select>
-            </div>
-
-            <div className="space-y-1 col-span-2">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Centre</label>
-              <input required type="text" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" placeholder="Nom du centre" value={newUser.center} onChange={(e) => setNewUser({...newUser, center: e.target.value})} />
-            </div>
-
-            {newUser.role === "obs_desk" && (
-              <div className="space-y-1 col-span-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase">ID Bureau</label>
-                <input required type="text" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" placeholder="N° Bureau" value={newUser.desk} onChange={(e) => setNewUser({...newUser, desk: e.target.value})} />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Rôle Jour-J</label>
+                <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
+                  <option value="obs_center">Observateur Centre</option>
+                  <option value="obs_desk">Observateur Bureau</option>
+                </select>
               </div>
-            )}
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Heure Début</label>
-              <input type="time" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.time} onChange={(e) => setNewUser({...newUser, time: e.target.value})} />
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Centre de Vote</label>
+                <select 
+                  className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" 
+                  value={newUser.center} 
+                  onChange={(e) => setNewUser({...newUser, center: e.target.value})}
+                >
+                  <option value="">Sélectionner...</option>
+                  {useData().centersData.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-zinc-500 uppercase">Date</label>
-              <input type="date" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.date} onChange={(e) => setNewUser({...newUser, date: e.target.value})} />
-            </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-zinc-500 uppercase">Photo / Image</label>
-            <div className="h-24 w-full border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 text-xs font-medium cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-              Cliquez pour uploader
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">NIN (18 chiffres)</label>
+                <input required type="text" maxLength={18} pattern="[0-9]*" inputMode="numeric" placeholder="Identifiant National" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.nin} onChange={(e) => setNewUser({...newUser, nin: e.target.value.replace(/\D/g, "")})} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">N° Téléphone</label>
+                <input required type="text" placeholder="05/06/07..." className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.phone} onChange={(e) => setNewUser({...newUser, phone: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Heure Début</label>
+                <input type="time" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.time} onChange={(e) => setNewUser({...newUser, time: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Date</label>
+                <input type="date" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none" value={newUser.date} onChange={(e) => setNewUser({...newUser, date: e.target.value})} />
+              </div>
             </div>
           </div>
 

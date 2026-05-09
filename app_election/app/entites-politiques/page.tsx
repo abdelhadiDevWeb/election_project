@@ -19,6 +19,7 @@ import { useData } from "../context/DataContext";
 
 export default function EntitesPolitiques() {
   const { 
+    wilayasData,
     partiesData, setPartiesData,
     candidatesData, setCandidatesData
   } = useData();
@@ -146,7 +147,7 @@ export default function EntitesPolitiques() {
         title={editingItem ? "Modifier " + (activeTab === 'parties' ? "le Parti" : "le Candidat") : (activeTab === 'parties' ? "Enregistrer un Nouveau Parti" : "Enregistrer un Nouveau Candidat")}
       >
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-          {activeTab === 'parties' ? (
+          {activeTab === "parties" ? (
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-500 uppercase">Nom Complet du Parti</label>
@@ -154,63 +155,76 @@ export default function EntitesPolitiques() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">Wilaya Siège</label>
-                  <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.wilaya} onChange={(e) => setFormData({...formData, wilaya: e.target.value})}>
-                    <option value="Alger">16 - Alger</option>
-                    <option value="Oran">31 - Oran</option>
-                    <option value="Batna">05 - Batna</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">Sigle (Court)</label>
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Acronyme / Sigle</label>
                   <input required type="text" placeholder="Ex: FLN" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.short} onChange={(e) => setFormData({...formData, short: e.target.value})} />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Secrétaire Général</label>
+                  <input required type="text" placeholder="Nom du leader" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.leader} onChange={(e) => setFormData({...formData, leader: e.target.value})} />
+                </div>
               </div>
-              <div className="p-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center gap-2 text-zinc-400">
-                <ImageIcon size={24} />
-                <span className="text-xs font-medium">Logo du Parti (PNG/JPG)</span>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 uppercase">Wilaya du Siège</label>
+                <select 
+                  className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" 
+                  value={formData.wilaya} 
+                  onChange={(e) => setFormData({...formData, wilaya: e.target.value})}
+                >
+                  <option value="">Sélectionner une Wilaya</option>
+                  {wilayasData.map(w => <option key={w.id} value={w.name}>{w.name}</option>)}
+                </select>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-500 uppercase">Nom Complet du Candidat</label>
-                <input required type="text" placeholder="Ex: Ali Benflis" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">NIN</label>
-                  <input required type="text" pattern="[0-9]*" inputMode="numeric" placeholder="18 chiffres" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.nin} onChange={(e) => setFormData({...formData, nin: e.target.value.replace(/\D/g, "")})} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">Téléphone</label>
-                  <input required type="text" pattern="[0-9]*" inputMode="numeric" placeholder="05XX XX XX XX" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, "")})} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500 uppercase">Date de Naissance</label>
-                <input required type="date" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.birthday} onChange={(e) => setFormData({...formData, birthday: e.target.value})} />
+                <input required type="text" placeholder="Prénom et Nom" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-500 uppercase">Parti Politique</label>
-                  <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.short} onChange={(e) => setFormData({...formData, short: e.target.value})}>
-                    <option value="">Indépendant</option>
-                    {partiesData.map(p => <option key={p.id} value={p.short}>{p.name}</option>)}
+                  <select 
+                    className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" 
+                    value={formData.short} 
+                    onChange={(e) => setFormData({...formData, short: e.target.value})}
+                  >
+                    <option value="">Choisir un parti...</option>
+                    <option value="Indépendant">Indépendant</option>
+                    {partiesData.map(p => <option key={p.id} value={p.short}>{p.name} ({p.short})</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase">Wilaya d'Attache</label>
-                  <select className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.wilaya} onChange={(e) => setFormData({...formData, wilaya: e.target.value})}>
-                    <option value="Alger">Alger</option>
-                    <option value="Oran">Oran</option>
-                    <option value="Batna">Batna</option>
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Wilaya de Candidature</label>
+                  <select 
+                    className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none text-sm" 
+                    value={formData.wilaya} 
+                    onChange={(e) => setFormData({...formData, wilaya: e.target.value})}
+                  >
+                    <option value="">Choisir une wilaya...</option>
+                    {wilayasData.map(w => <option key={w.id} value={w.name}>{w.name}</option>)}
                   </select>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                <input type="checkbox" className="h-4 w-4 rounded border-zinc-300 text-algerian-green focus:ring-algerian-green outline-none" checked={formData.fav} onChange={(e) => setFormData({...formData, fav: e.target.checked})} />
-                <label className="text-sm font-medium">Marquer comme favori (Fav)</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">NIN (18 chiffres)</label>
+                  <input required type="text" maxLength={18} pattern="[0-9]*" inputMode="numeric" placeholder="Identifiant National" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.nin} onChange={(e) => setFormData({...formData, nin: e.target.value.replace(/\D/g, "")})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">N° Téléphone</label>
+                  <input required type="text" placeholder="05/06/07..." className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">Date de Naissance</label>
+                  <input required type="date" className="w-full h-11 px-4 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 outline-none" value={formData.birthday} onChange={(e) => setFormData({...formData, birthday: e.target.value})} />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input type="checkbox" id="fav" className="w-5 h-5 rounded border-zinc-300 text-algerian-green focus:ring-algerian-green" checked={formData.fav} onChange={(e) => setFormData({...formData, fav: e.target.checked})} />
+                  <label htmlFor="fav" className="text-sm font-medium">Candidat Favori</label>
+                </div>
               </div>
               <div className="p-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center gap-2 text-zinc-400">
                 <UserPlus size={24} />
