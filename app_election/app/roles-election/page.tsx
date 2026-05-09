@@ -15,13 +15,12 @@ import {
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
+import { useData } from "../context/DataContext";
+
 export default function RolesElection() {
-  const [observersData, setObserversData] = useState([
-    { id: 1, name: "Karim Slimani", role: "Observateur Bureau", center: "Centre Pasteur", desk: "08", location: "Centre Pasteur - Bureau 08", code: "TMP-882-X", status: "Actif", expires: "20:00", email: "k.slimani@gmail.com", nin: "198516010011223344", phone: "0550112233" },
-    { id: 2, name: "Sara Haddad", role: "Chef de Centre", center: "Centre Ibn Badis", desk: "N/A", location: "Centre Ibn Badis", code: "TMP-441-Y", status: "Actif", expires: "22:00", email: "s.haddad@gmail.com", nin: "199216010044556677", phone: "0550445566" },
-    { id: 3, name: "Ahmed Mansour", role: "Observateur Centre", center: "Centre Emir Abdelkader", desk: "N/A", location: "Centre Emir Abdelkader", code: "TMP-901-Z", status: "Expiré", expires: "08:00 (Fermé)", email: "a.mansour@gmail.com", nin: "197816010077889900", phone: "0550778899" },
-    { id: 4, name: "Leila Bekhti", role: "Observateur Bureau", center: "Centre Pasteur", desk: "02", location: "Centre Pasteur - Bureau 02", code: "TMP-112-A", status: "Actif", expires: "20:00", email: "l.bekhti@gmail.com", nin: "199516010022334455", phone: "0661223344" },
-  ]);
+  const { 
+    observersData, setObserversData
+  } = useData();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);

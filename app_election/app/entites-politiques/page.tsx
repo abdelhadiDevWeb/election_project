@@ -15,23 +15,13 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function EntitesPolitiques() {
-  const [partiesData, setPartiesData] = useState([
-    { id: 1, name: "Front de Libération Nationale", short: "FLN", leader: "Abou El Fadhel Baadji", wilaya_siege: "Alger" },
-    { id: 2, name: "Rassemblement National Démocratique", short: "RND", leader: "Mustapha Yahi", wilaya_siege: "Alger" },
-    { id: 3, name: "Mouvement de la Société pour la Paix", short: "MSP", leader: "Abdelali Hassani Cherif", wilaya_siege: "Alger" },
-    { id: 4, name: "Front des Forces Socialistes", short: "FFS", leader: "Youcef Aouchiche", wilaya_siege: "Tizi Ouzou" },
-    { id: 5, name: "Parti des Travailleurs", short: "PT", leader: "Louisa Hanoune", wilaya_siege: "Alger" },
-    { id: 6, name: "Jil Jadid", short: "JJ", leader: "Soufiane Djilali", wilaya_siege: "Alger" },
-  ]);
+import { useData } from "../context/DataContext";
 
-  const [candidatesData, setCandidatesData] = useState([
-    { id: 1, full_name: "Abdelmadjid Tebboune", party: "Indépendant", wilaya: "Alger", nin: "194511171600123456", phone: "0550112233", birthday: "1945-11-17", fav: true, result: 0 },
-    { id: 2, full_name: "Youcef Aouchiche", party: "FFS", wilaya: "Tizi Ouzou", nin: "198301291500456789", phone: "0550445566", birthday: "1983-01-29", fav: false, result: 0 },
-    { id: 3, full_name: "Abdelali Hassani Cherif", party: "MSP", wilaya: "M'Sila", nin: "196603152800789123", phone: "0550778899", birthday: "1966-03-15", fav: false, result: 0 },
-    { id: 4, full_name: "Louisa Hanoune", party: "PT", wilaya: "Alger", nin: "195404071600234567", phone: "0661223344", birthday: "1954-04-07", fav: false, result: 0 },
-    { id: 5, full_name: "Ali Benflis", party: "Indépendant", wilaya: "Batna", nin: "194409080500345678", phone: "0770556677", birthday: "1944-09-08", fav: true, result: 0 },
-  ]);
+export default function EntitesPolitiques() {
+  const { 
+    partiesData, setPartiesData,
+    candidatesData, setCandidatesData
+  } = useData();
 
   const [activeTab, setActiveTab] = useState("parties");
   const [isModalOpen, setIsModalOpen] = useState(false);

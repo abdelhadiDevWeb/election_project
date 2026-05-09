@@ -18,40 +18,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useData } from "../context/DataContext";
 
 export default function InfrastructureSetup() {
-  const [wilayasData, setWilayasData] = useState([
-    { id: 1, name: "Adrar", num_wilaya: "01", seats_count: 8, communes: 28, centers: 142, desks: 840 },
-    { id: 2, name: "Chlef", num_wilaya: "02", seats_count: 12, communes: 35, centers: 210, desks: 1100 },
-    { id: 5, name: "Batna", num_wilaya: "05", seats_count: 14, communes: 61, centers: 320, desks: 1450 },
-    { id: 6, name: "Béjaïa", num_wilaya: "06", seats_count: 12, communes: 52, centers: 280, desks: 1200 },
-    { id: 9, name: "Blida", num_wilaya: "09", seats_count: 10, communes: 25, centers: 180, desks: 950 },
-    { id: 13, name: "Tlemcen", num_wilaya: "13", seats_count: 11, communes: 53, centers: 240, desks: 1050 },
-    { id: 16, name: "Alger", num_wilaya: "16", seats_count: 35, communes: 57, centers: 612, desks: 2450 },
-    { id: 19, name: "Sétif", num_wilaya: "19", seats_count: 19, communes: 60, centers: 410, desks: 1800 },
-    { id: 25, name: "Constantine", num_wilaya: "25", seats_count: 12, communes: 12, centers: 195, desks: 1020 },
-    { id: 31, name: "Oran", num_wilaya: "31", seats_count: 22, communes: 26, centers: 215, desks: 1120 },
-  ]);
-
-  const [communesData, setCommunesData] = useState([
-    { id: 1, name: "Sidi M'hamed", num_bladia: "01", wilaya: "Alger", centers: 12, desks: 84 },
-    { id: 2, name: "Bab El Oued", num_bladia: "05", wilaya: "Alger", centers: 8, desks: 56 },
-    { id: 3, name: "Es Senia", num_bladia: "12", wilaya: "Oran", centers: 10, desks: 70 },
-    { id: 4, name: "El Khroub", num_bladia: "03", wilaya: "Constantine", centers: 15, desks: 95 },
-    { id: 5, name: "Akbou", num_bladia: "08", wilaya: "Béjaïa", centers: 10, desks: 65 },
-  ]);
-
-  const [centersData, setCentersData] = useState([
-    { id: 1, name: "Centre Pasteur", location: "Rue Didouche Mourad", male: 2400, female: 2400, total: 4800, numbers_desks: 12 },
-    { id: 2, name: "Centre Ibn Badis", location: "Place du 1er Mai", male: 1600, female: 1600, total: 3200, numbers_desks: 8 },
-    { id: 3, name: "Centre Emir Abdelkader", location: "Boulevard des Martyrs", male: 2000, female: 2000, total: 4000, numbers_desks: 10 },
-  ]);
-
-  const [desksData, setDesksData] = useState([
-    { id: 1, num_desk: "01", center: "Centre Pasteur", male: 200, female: 200, total: 400 },
-    { id: 2, num_desk: "02", center: "Centre Pasteur", male: 150, female: 150, total: 300 },
-    { id: 3, num_desk: "01", center: "Centre Ibn Badis", male: 250, female: 230, total: 480 },
-  ]);
+  const { 
+    wilayasData, setWilayasData,
+    communesData, setCommunesData,
+    centersData, setCentersData,
+    desksData, setDesksData
+  } = useData();
 
   const [activeTab, setActiveTab] = useState<"wilayas" | "communes" | "centers" | "desks">("wilayas");
   const [isModalOpen, setIsModalOpen] = useState(false);

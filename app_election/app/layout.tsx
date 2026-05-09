@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   description: "Plateforme officielle de gestion des élections de l'Autorité Nationale Indépendante des Élections.",
 };
 
+import { DataProvider } from "./context/DataContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,15 +24,17 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-zinc-100 font-sans">
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <div className="flex-1 flex flex-col pl-64">
-            <Header />
-            <main className="flex-1 p-8">
-              {children}
-            </main>
+        <DataProvider>
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <div className="flex-1 flex flex-col pl-64">
+              <Header />
+              <main className="flex-1 p-8">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </DataProvider>
       </body>
     </html>
   );

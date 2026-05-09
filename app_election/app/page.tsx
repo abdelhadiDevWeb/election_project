@@ -16,33 +16,45 @@ import {
 } from "lucide-react";
 import StatCard from "./components/StatCard";
 import { motion } from "framer-motion";
-
-const adminStats = [
-  { title: "Wilayas", value: "58", icon: MapPin },
-  { title: "Communes", value: "1,541", icon: Building2 },
-  { title: "Admins Wilaya", value: "58", icon: Shield },
-  { title: "Admins Commun", value: "1,541", icon: Shield },
-];
-
-const politicalStats = [
-  { title: "Partis Politiques", value: "32", icon: Flag },
-  { title: "Candidats", value: "148", icon: Users },
-  { title: "Membres Actifs", value: "12,450", icon: Users },
-];
-
-const jourJStats = [
-  { title: "Obs. Centres", value: "13,181", icon: Key },
-  { title: "Obs. Bureaux", value: "61,543", icon: Key },
-];
-
-const recentActivity = [
-  { id: 1, type: "success", title: "PV Validé", bureau: "Bureau 04 - Centre Ibn Badis", location: "Alger, Sidi M'hamed", time: "Il y a 2 min" },
-  { id: 2, type: "warning", title: "Écart de Saisie", bureau: "Bureau 12 - Centre Emir Abdelkader", location: "Oran, Es Senia", time: "Il y a 5 min" },
-  { id: 3, type: "success", title: "PV Soumis", bureau: "Bureau 01 - Centre 1er Novembre", location: "Constantine, El Khroub", time: "Il y a 12 min" },
-  { id: 4, type: "info", title: "Ouverture du Bureau", bureau: "Bureau 08 - Centre Pasteur", location: "Bejaia, Akbou", time: "Il y a 45 min" },
-];
+import { useData } from "./context/DataContext";
 
 export default function Dashboard() {
+  const { 
+    wilayasData, 
+    communesData, 
+    centersData, 
+    desksData, 
+    partiesData, 
+    candidatesData, 
+    adminsData, 
+    membersData, 
+    observersData 
+  } = useData();
+
+  const adminStats = [
+    { title: "Wilayas", value: wilayasData.length.toString(), icon: MapPin },
+    { title: "Communes", value: communesData.length.toString(), icon: Building2 },
+    { title: "Admins Wilaya", value: adminsData.filter(a => a.role.includes("Wilaya")).length.toString(), icon: Shield },
+    { title: "Admins Commun", value: adminsData.filter(a => a.role.includes("Baladia")).length.toString(), icon: Shield },
+  ];
+
+  const politicalStats = [
+    { title: "Partis Politiques", value: partiesData.length.toString(), icon: Flag },
+    { title: "Candidats", value: candidatesData.length.toString(), icon: Users },
+    { title: "Membres Actifs", value: membersData.length.toString(), icon: Users },
+  ];
+
+  const jourJStats = [
+    { title: "Obs. Centres", value: observersData.filter(o => o.role.includes("Centre")).length.toString(), icon: Key },
+    { title: "Obs. Bureaux", value: observersData.filter(o => o.role.includes("Bureau")).length.toString(), icon: Key },
+  ];
+
+  const recentActivity = [
+    { id: 1, type: "success", title: "PV Validé", bureau: "Bureau 04 - Centre Ibn Badis", location: "Alger, Sidi M'hamed", time: "Il y a 2 min" },
+    { id: 2, type: "warning", title: "Écart de Saisie", bureau: "Bureau 12 - Centre Emir Abdelkader", location: "Oran, Es Senia", time: "Il y a 5 min" },
+    { id: 3, type: "success", title: "PV Soumis", bureau: "Bureau 01 - Centre 1er Novembre", location: "Constantine, El Khroub", time: "Il y a 12 min" },
+    { id: 4, type: "info", title: "Ouverture du Bureau", bureau: "Bureau 08 - Centre Pasteur", location: "Bejaia, Akbou", time: "Il y a 45 min" },
+  ];
   return (
     <div className="space-y-10">
       <div>
