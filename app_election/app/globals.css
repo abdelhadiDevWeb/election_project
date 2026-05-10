@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-algerian-green: #006233;
@@ -166,11 +167,6 @@ input:focus, select:focus {
   background-color: rgba(9, 9, 11, 0.5) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
   backdrop-filter: blur(8px);
-}
-
-.dark .tab-active {
-  background-color: #fafafa !important;
-  color: #000000 !important;
 }
 
 /* Ambient Glow Shadows */
