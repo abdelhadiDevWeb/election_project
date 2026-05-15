@@ -1,26 +1,187 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Drapeau algérien — vert / blanc / rouge (usage sobre, institutionnel) */
+  --dz-green: #006233;
+  --dz-white: #ffffff;
+  --dz-red: #d21034;
+
+  --background: #f3f6f4;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #eef4f0;
+  --border: #dce7e0;
+  --brand: #006233;
+  --brand-muted: #004d29;
+  --accent-line: #006233;
+  --sidebar: #0a1628;
+  --sidebar-hover: #132a45;
+  --success: #006233;
+  --warning: #a16207;
+  --muted: #64748b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-muted: var(--brand-muted);
+  --color-accent-line: var(--accent-line);
+  --color-dz-green: var(--dz-green);
+  --color-dz-white: var(--dz-white);
+  --color-dz-red: var(--dz-red);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-muted: var(--muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dz-flag-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes row-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Fine barre tricolore animée (header, accents) */
+.dz-flag-bar {
+  background: linear-gradient(
+    90deg,
+    var(--dz-green) 0%,
+    var(--dz-green) 28%,
+    #e8f4ec 42%,
+    var(--dz-white) 50%,
+    #fce8ec 58%,
+    var(--dz-red) 72%,
+    var(--dz-red) 100%
+  );
+  background-size: 200% 100%;
+  animation: dz-flag-flow 16s linear infinite;
+}
+
+/* Liseré cartes — même palette, mouvement lent */
+.dz-stat-strip {
+  background: linear-gradient(
+    90deg,
+    var(--dz-green),
+    #c8e6d4,
+    var(--dz-white),
+    #f5c4cc,
+    var(--dz-red),
+    var(--dz-green)
+  );
+  background-size: 300% 100%;
+  animation: dz-flag-flow 12s ease-in-out infinite;
+}
+
+.dz-underline-wave {
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    var(--dz-green),
+    var(--dz-white),
+    var(--dz-red),
+    var(--dz-green)
+  );
+  background-size: 220% 100%;
+  animation: dz-flag-flow 18s ease-in-out infinite;
+}
+
+.animate-row-in {
+  animation: row-slide-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.row-delay-1 {
+  animation-delay: 0.04s;
+}
+.row-delay-2 {
+  animation-delay: 0.08s;
+}
+.row-delay-3 {
+  animation-delay: 0.12s;
+}
+.row-delay-4 {
+  animation-delay: 0.16s;
+}
+.row-delay-5 {
+  animation-delay: 0.2s;
+}
+
+.animate-enter {
+  animation: enter-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-enter-fade {
+  animation: enter-fade 0.4s ease-out both;
+}
+
+.delay-1 {
+  animation-delay: 0.06s;
+}
+.delay-2 {
+  animation-delay: 0.12s;
+}
+.delay-3 {
+  animation-delay: 0.18s;
+}
+.delay-4 {
+  animation-delay: 0.24s;
+}
+.delay-5 {
+  animation-delay: 0.3s;
+}
+.delay-6 {
+  animation-delay: 0.36s;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Focus visible for keyboard / accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
 }
