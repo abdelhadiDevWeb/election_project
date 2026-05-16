@@ -29,7 +29,8 @@ export default function InfrastructureSetup() {
     wilayasData, setWilayasData,
     communesData, setCommunesData,
     centersData, setCentersData,
-    desksData, setDesksData
+    desksData, setDesksData,
+    mutation
   } = useData();
   const { t, language, dir } = useLanguage();
 
@@ -107,7 +108,9 @@ export default function InfrastructureSetup() {
           }
         });
 
-        setCentersData(prev => [...newCenters, ...prev]);
+        // Note: In a real integration, this should hit a batch create API endpoint.
+        // For now, we just refresh the data.
+        setCentersData([]);
         
         alert(language === 'ar' ? `تم الاستيراد بنجاح: تمت معالجة ${data.length} صفًا.` : "Importation réussie : " + data.length + " lignes traitées.");
       } catch (err) {
@@ -152,100 +155,87 @@ export default function InfrastructureSetup() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number, type: "wilaya" | "commune" | "center" | "desk") => {
+  const handleDelete = async (id: number | string, type: "wilaya" | "commune" | "center" | "desk") => {
     if (confirm("Êtes-vous sûr de vouloir supprimer cet élément ?")) {
-      switch (type) {
-        case "wilaya": setWilayasData(wilayasData.filter(w => w.id !== id)); break;
-        case "commune": setCommunesData(communesData.filter(c => c.id !== id)); break;
-        case "center": setCentersData(centersData.filter(c => c.id !== id)); break;
-        case "desk": setDesksData(desksData.filter(d => d.id !== id)); break;
+      try {
+        const endpointMap = { wilaya: "wilayas", commune: "communes", center: "centers", desk: "desks" };
+        const dataMap = { wilaya: wilayasData, commune: communesData, center: centersData, desk: desksData };
+        const item = dataMap[type].find((i: any) => i.id === id || i._id === id);
+        const apiId = item?._id || item?.id || id;
+        await mutation.mutate("DELETE", `/${endpointMap[type]}/${apiId}`);
+        switch (type) {
+          case "wilaya": setWilayasData([]); break;
+          case "commune": setCommunesData([]); break;
+          case "center": setCentersData([]); break;
+          case "desk": setDesksData([]); break;
+        }
+      } catch (err: any) {
+        alert(err?.message || "Delete failed");
       }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (modalType === "wilaya") {
-      if (editingItem) {
-        setWilayasData(wilayasData.map(w => w.id === editingItem.id ? {
-          ...w,
-          name: formData.name,
-          num_wilaya: formData.num,
+    try {
+      if (modalType === "wilaya") {
+        const body = {
+          name_fr: formData.name,
+          name_ar: formData.name,
+          wilaya_code: parseInt(formData.num) || 0,
           seats_count: parseInt(formData.seats) || 0,
-        } : w));
-      } else {
-        setWilayasData([{
-          id: wilayasData.length + 50,
+        };
+        if (editingItem) {
+          await mutation.mutate("PUT", `/wilayas/${editingItem._id || editingItem.id}`, body);
+        }
+        setWilayasData([]);
+      } else if (modalType === "commune") {
+        const selectedWilaya = wilayasData.find(w => w.name === formData.wilaya || w.name_fr === formData.wilaya);
+        const body = {
+          name_fr: formData.name,
+          name_ar: formData.name,
+          commune_id: parseInt(formData.num) || 0,
+          wilaya: selectedWilaya?._id,
+        };
+        if (editingItem) {
+          await mutation.mutate("PUT", `/communes/${editingItem._id || editingItem.id}`, body);
+        } else {
+          await mutation.mutate("POST", "/communes", body);
+        }
+        setCommunesData([]);
+      } else if (modalType === "center") {
+        const body = {
           name: formData.name,
-          num_wilaya: formData.num,
-          seats_count: parseInt(formData.seats) || 0,
-          communes: 0,
-          centers: 0,
-          desks: 0
-        }, ...wilayasData]);
+          address: formData.location,
+          male_registered: formData.male,
+          female_registered: formData.female,
+          total_registered: formData.male + formData.female,
+          numbers_desks: formData.desksCount,
+        };
+        if (editingItem) {
+          await mutation.mutate("PUT", `/centers/${editingItem._id || editingItem.id}`, body);
+        } else {
+          await mutation.mutate("POST", "/centers", body);
+        }
+        setCentersData([]);
+      } else if (modalType === "desk") {
+        const body = {
+          desk_number: parseInt(formData.num) || 0,
+          male_registered: formData.male,
+          female_registered: formData.female,
+          total_registered: formData.male + formData.female,
+        };
+        if (editingItem) {
+          await mutation.mutate("PUT", `/desks/${editingItem._id || editingItem.id}`, body);
+        } else {
+          await mutation.mutate("POST", "/desks", body);
+        }
+        setDesksData([]);
       }
-    } else if (modalType === "commune") {
-      if (editingItem) {
-        setCommunesData(communesData.map(c => c.id === editingItem.id ? {
-          ...c,
-          name: formData.name,
-          num_bladia: formData.num,
-          wilaya: formData.wilaya,
-        } : c));
-      } else {
-        setCommunesData([{
-          id: communesData.length + 1,
-          name: formData.name,
-          num_bladia: formData.num,
-          wilaya: formData.wilaya,
-          centers: 0,
-          desks: 0
-        }, ...communesData]);
-      }
-    } else if (modalType === "center") {
-      if (editingItem) {
-        setCentersData(centersData.map(c => c.id === editingItem.id ? {
-          ...c,
-          name: formData.name,
-          location: formData.location,
-          male: formData.male,
-          female: formData.female,
-          total: formData.male + formData.female,
-          numbers_desks: formData.desksCount
-        } : c));
-      } else {
-        setCentersData([{
-          id: centersData.length + 1,
-          name: formData.name,
-          location: formData.location,
-          male: formData.male,
-          female: formData.female,
-          total: formData.male + formData.female,
-          numbers_desks: formData.desksCount
-        }, ...centersData]);
-      }
-    } else if (modalType === "desk") {
-      if (editingItem) {
-        setDesksData(desksData.map(d => d.id === editingItem.id ? {
-          ...d,
-          num_desk: formData.num,
-          center: formData.center,
-          male: formData.male,
-          female: formData.female,
-          total: formData.male + formData.female
-        } : d));
-      } else {
-        setDesksData([{
-          id: desksData.length + 1,
-          num_desk: formData.num,
-          center: formData.center,
-          male: formData.male,
-          female: formData.female,
-          total: formData.male + formData.female
-        }, ...desksData]);
-      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert(err?.message || "Operation failed");
     }
-    setIsModalOpen(false);
   };
 
   const tabs = [

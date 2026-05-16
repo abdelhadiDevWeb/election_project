@@ -26,6 +26,15 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:4005/api/:path*",
+      },
+    ];
+  },
+
   async headers() {
     const isDev = process.env.NODE_ENV !== "production";
     const csp = buildCspHeader(isDev);

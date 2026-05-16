@@ -19,7 +19,9 @@ import {
   Activity,
   Zap,
   ShieldCheck,
-  Users
+  Users,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,7 +32,9 @@ export default function GestionAcces() {
   const { 
     adminsData, setAdminsData,
     membersData, setMembersData,
-    wilayasData
+    wilayasData, communesData,
+    partiesData,
+    mutation
   } = useData();
   const { t, language, dir } = useLanguage();
 
@@ -44,13 +48,15 @@ export default function GestionAcces() {
     email: "",
     phone: "",
     nin: "",
-    role: "admin_wilaya",
-    wilaya: "Alger",
+    password: "",
+    wilaya: "",
     baladia: "",
+    party_id: "",
     birthday: "",
     goal: "",
     admin_commun: "Abdelkader Ben"
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const tabs = [
     { id: "admins", label: language === 'ar' ? 'الإدارة' : 'Administration', icon: Shield, count: adminsData.length },
@@ -66,89 +72,106 @@ export default function GestionAcces() {
         email: item.email,
         phone: item.phone,
         nin: item.nin,
-        role: item.role.includes("Wilaya") ? "admin_wilaya" : "admin_baladia",
-        wilaya: item.wilaya || item.location || "Alger",
-        baladia: "",
+        password: "",
+        role: item.role.includes("Wilaya") ? "admin_wilaya" : "admin_commun",
+        wilaya: item.wilaya_id || "",
+        baladia: item.commune_id || "",
+        party_id: item.party_id || "",
         birthday: item.birthday || "",
         goal: item.goal || "",
         admin_commun: item.admin_commun || "Abdelkader Ben"
       });
     } else {
       setNewUser({ 
-        name: "", email: "", phone: "", nin: "", 
+        name: "", email: "", phone: "", nin: "", password: "",
         role: mode === 'admin' ? 'admin_wilaya' : 'membre_actif',
-        wilaya: "Alger", baladia: "", birthday: "", goal: "",
+        wilaya: "", baladia: "", party_id: "", birthday: "", goal: "",
         admin_commun: "Abdelkader Ben"
       });
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number, type: "admin" | "member") => {
+  const handleDelete = async (id: number | string, type: "admin" | "member") => {
     if (confirm("Êtes-vous sûr de vouloir révoquer cet accès ?")) {
-      if (type === "admin") {
-        setAdminsData(adminsData.filter(a => a.id !== id));
-      } else {
-        setMembersData(membersData.filter(m => m.id !== id));
+      try {
+        if (type === "admin") {
+          const admin = adminsData.find(a => a.id === id || a._id === id);
+          const apiId = admin?._id || admin?.id || id;
+          const endpoint = admin?._type === "admin_commun" 
+            ? `/admin-communs/${apiId}` 
+            : `/admin-wilayas/${apiId}`;
+          await mutation.mutate("DELETE", endpoint);
+          setAdminsData([]);
+        } else {
+          const member = membersData.find(m => m.id === id || m._id === id);
+          const apiId = member?._id || member?.id || id;
+          await mutation.mutate("DELETE", `/members-actifs/${apiId}`);
+          setMembersData([]);
+        }
+      } catch (err: any) {
+        alert(err?.message || "Delete failed");
       }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (modalMode === "admin") {
-      if (editingItem) {
-        setAdminsData(adminsData.map(a => a.id === editingItem.id ? {
-          ...a,
-          name: newUser.name,
+    try {
+      if (modalMode === "admin") {
+        const isWilayaAdmin = newUser.role === "admin_wilaya";
+        const endpoint = isWilayaAdmin ? "/admin-wilayas" : "/admin-communs";
+        const body: any = {
+          full_name: newUser.name,
           email: newUser.email,
           nin: newUser.nin,
           phone: newUser.phone,
-          role: newUser.role === "admin_wilaya" ? `Admin Wilaya (${newUser.wilaya})` : "Admin Baladia",
-          wilaya: newUser.wilaya
-        } : a));
+          wilaya: newUser.wilaya,
+          status: "active",
+        };
+        if (newUser.password) body.password = newUser.password;
+        if (!isWilayaAdmin && newUser.baladia) body.commune = newUser.baladia;
+
+        if (editingItem) {
+          const apiId = editingItem._id || editingItem.id;
+          const editEndpoint = editingItem._type === "admin_commun" 
+            ? `/admin-communs/${apiId}` 
+            : `/admin-wilayas/${apiId}`;
+          await mutation.mutate("PUT", editEndpoint, body);
+        } else {
+          if (!newUser.password) { alert("Password is required"); return; }
+          await mutation.mutate("POST", endpoint, body);
+        }
+        setAdminsData([]);
       } else {
-        setAdminsData([{
-          id: adminsData.length + 1,
-          name: newUser.name,
-          email: newUser.email,
-          nin: newUser.nin || "Non spécifié",
-          phone: newUser.phone || "Non spécifié",
-          role: newUser.role === "admin_wilaya" ? `Admin Wilaya (${newUser.wilaya})` : "Admin Baladia",
-          status: "Actif",
-          wilaya: newUser.wilaya
-        }, ...adminsData]);
-      }
-    } else {
-      if (editingItem) {
-        setMembersData(membersData.map(m => m.id === editingItem.id ? {
-          ...m,
-          name: newUser.name,
+        const body: any = {
+          full_name: newUser.name,
           email: newUser.email,
           nin: newUser.nin,
           phone: newUser.phone,
-          birthday: newUser.birthday,
+          date_of_birth: newUser.birthday,
           goal: newUser.goal,
-          location: newUser.wilaya,
-          admin_commun: newUser.admin_commun
-        } : m));
-      } else {
-        setMembersData([{
-          id: membersData.length + 1,
-          name: newUser.name,
-          email: newUser.email,
-          nin: newUser.nin || "Non spécifié",
-          phone: newUser.phone || "Non spécifié",
-          birthday: newUser.birthday,
-          party: "Indépendant",
-          goal: newUser.goal || "Aucun objectif spécifié",
-          location: newUser.wilaya,
-          admin_commun: newUser.admin_commun,
-          status: "Permanent"
-        }, ...membersData]);
+          wilaya: newUser.wilaya,
+          commune: newUser.baladia,
+          party: newUser.party_id || undefined,
+        };
+        if (newUser.password) body.password = newUser.password;
+
+        if (editingItem) {
+          const apiId = editingItem._id || editingItem.id;
+          await mutation.mutate("PUT", `/members-actifs/${apiId}`, body);
+        } else {
+          if (!newUser.password) { alert("Password is required"); return; }
+          await mutation.mutate("POST", "/members-actifs", body);
+        }
+        setMembersData([]);
       }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      const details = err.response?.details;
+      const detailStr = Array.isArray(details) ? "\n" + details.join("\n") : "";
+      alert((err?.message || "Operation failed") + detailStr);
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -242,18 +265,57 @@ export default function GestionAcces() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'مستوى السلطة' : "Niveau d'Autorité"}</label>
                   <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
-                    <option value="Admin Wilaya">{language === 'ar' ? 'مسؤول ولاية' : 'Admin Wilaya'}</option>
-                    <option value="Admin Baladia">{language === 'ar' ? 'مسؤول بلدية' : 'Admin Baladia'}</option>
-                    <option value="Super Admin">{language === 'ar' ? 'مسؤول أعلى' : 'Super Admin'}</option>
+                    <option value="admin_wilaya">{language === 'ar' ? 'مسؤول ولاية' : 'Admin Wilaya'}</option>
+                    <option value="admin_commun">{language === 'ar' ? 'مسؤول بلدية' : 'Admin Commun'}</option>
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الدائرة' : 'Circonscription'}</label>
-                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.wilaya} onChange={(e) => setNewUser({...newUser, wilaya: e.target.value})}>
-                    <option value="">{language === 'ar' ? 'اختر ولاية' : 'Sélectionner une Wilaya'}</option>
-                    {wilayasData.map(w => <option key={w.id} value={w.name}>{w.name}</option>)}
-                  </select>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'كلمة المرور' : 'Mot de Passe'}</label>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold pr-12" 
+                      value={newUser.password} 
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})} 
+                      required={!editingItem}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
+              </div>
+              <div className="space-y-2">
+                {newUser.role === "admin_wilaya" ? (
+                  <>
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الولاية' : 'Wilaya'}</label>
+                    <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.wilaya} onChange={(e) => setNewUser({...newUser, wilaya: e.target.value})}>
+                      <option value="">{language === 'ar' ? 'اختر ولاية' : 'Sélectionner une Wilaya'}</option>
+                      {wilayasData.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'البلدية' : 'Admin Commun'}</label>
+                    <select 
+                      required 
+                      className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" 
+                      value={newUser.baladia} 
+                      onChange={(e) => {
+                        const com = communesData.find(c => c._id === e.target.value || c.id === e.target.value);
+                        setNewUser({...newUser, baladia: e.target.value, wilaya: com?.wilaya_id || ""});
+                      }}
+                    >
+                      <option value="">{language === 'ar' ? 'اختر بلدية' : 'Sélectionner une Commune'}</option>
+                      {communesData.map(c => <option key={c._id} value={c._id}>{c.name} ({c.wilaya})</option>)}
+                    </select>
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -265,27 +327,59 @@ export default function GestionAcces() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الانتماء السياسي' : 'Affiliation Politique'}</label>
-                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
-                    <option value="Indépendant">{language === 'ar' ? 'مستقل' : 'Indépendant'}</option>
-                    {useData().partiesData.map(p => <option key={p.id} value={p.short}>{p.name} ({p.short})</option>)}
+                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.party_id} onChange={(e) => setNewUser({...newUser, party_id: e.target.value})}>
+                    <option value="">{language === 'ar' ? 'مستقل' : 'Indépendant'}</option>
+                    {partiesData.map(p => <option key={p._id} value={p._id}>{p.name} ({p.short})</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الإقامة' : 'Résidence'}</label>
-                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.wilaya} onChange={(e) => setNewUser({...newUser, wilaya: e.target.value})}>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الولاية' : 'Wilaya'}</label>
+                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.wilaya} onChange={(e) => setNewUser({...newUser, wilaya: e.target.value, baladia: ""})}>
                     <option value="">{language === 'ar' ? 'اختر ولاية' : 'Sélectionner une Wilaya'}</option>
-                    {wilayasData.map(w => <option key={w.id} value={w.name}>{w.name}</option>)}
+                    {wilayasData.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'البلدية' : 'Commune'}</label>
+                  <select 
+                    required 
+                    className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" 
+                    value={newUser.baladia} 
+                    onChange={(e) => setNewUser({...newUser, baladia: e.target.value})}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر بلدية' : 'Sélectionner une Commune'}</option>
+                    {communesData.filter(c => String(c.wilaya_id) === String(newUser.wilaya)).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'رقم التعريف الوطني' : 'NIN'}</label>
                   <input required type="text" maxLength={18} pattern="[0-9]*" inputMode="numeric" placeholder={language === 'ar' ? '18 رقمًا' : "18 chiffres"} className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.nin} onChange={(e) => setNewUser({...newUser, nin: e.target.value.replace(/\D/g, "")})} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'تاريخ الميلاد' : 'Date de Naissance'}</label>
-                  <input required type="date" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.birthday} onChange={(e) => setNewUser({...newUser, birthday: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'تاريخ الميلاد' : 'Date de Naissance'}</label>
+                <input required type="date" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.birthday} onChange={(e) => setNewUser({...newUser, birthday: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'كلمة المرور' : 'Mot de Passe'}</label>
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="••••••••" 
+                    className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold pr-12" 
+                    value={newUser.password} 
+                    onChange={(e) => setNewUser({...newUser, password: e.target.value})} 
+                    required={!editingItem}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
               <div className="space-y-2">

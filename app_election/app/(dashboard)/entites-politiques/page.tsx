@@ -11,18 +11,22 @@ import {
   UserPlus,
   ShieldCheck,
   Activity,
-  Medal
+  Medal,
+  Image as ImageIcon,
+  Camera
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../context/DataContext";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { useRef } from "react";
 
 export default function EntitesPolitiques() {
   const { 
     wilayasData,
     partiesData, setPartiesData,
-    candidatesData, setCandidatesData
+    candidatesData, setCandidatesData,
+    mutation
   } = useData();
   const { t, language, dir } = useLanguage();
 
@@ -30,7 +34,7 @@ export default function EntitesPolitiques() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     name: "",
     short: "",
     leader: "",
@@ -39,8 +43,12 @@ export default function EntitesPolitiques() {
     nin: "",
     phone: "",
     birthday: "",
-    fav: false
+    fav: false,
+    imageFile: null,
+    imagePreview: null
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openModal = (item: any = null) => {
     setEditingItem(item);
@@ -54,80 +62,107 @@ export default function EntitesPolitiques() {
         nin: item.nin || "",
         phone: item.phone || "",
         birthday: item.birthday || "",
-        fav: item.fav || false
+        fav: item.fav || false,
+        imageFile: null,
+        imagePreview: item._id ? `/api/candidats/${item._id}/portrait` : null
       });
     } else {
       setFormData({
         name: "", short: "", leader: "", wilaya: "Alger", founded: "2024",
-        nin: "", phone: "", birthday: "", fav: false
+        nin: "", phone: "", birthday: "", fav: false,
+        imageFile: null, imagePreview: null
       });
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number, type: "party" | "candidate") => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({
+          ...formData,
+          imageFile: file,
+          imagePreview: reader.result as string
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDelete = async (id: number | string, type: "party" | "candidate") => {
     const confirmMsg = language === 'ar' 
       ? `هل أنت متأكد من رغبتك في حذف هذا ${type === 'party' ? 'الحزب' : 'المترشح'}؟`
       : `Êtes-vous sûr de vouloir supprimer ce ${type === 'party' ? 'parti' : 'candidat'} ?`;
     
     if (confirm(confirmMsg)) {
-      if (type === "party") {
-        setPartiesData(partiesData.filter(p => p.id !== id));
-      } else {
-        setCandidatesData(candidatesData.filter(c => c.id !== id));
+      try {
+        const item = type === "party" 
+          ? partiesData.find(p => p.id === id || p._id === id)
+          : candidatesData.find(c => c.id === id || c._id === id);
+        const apiId = item?._id || item?.id || id;
+        const endpoint = type === "party" ? `/parties/${apiId}` : `/candidats/${apiId}`;
+        await mutation.mutate("DELETE", endpoint);
+        // Trigger refetch
+        if (type === "party") setPartiesData([]);
+        else setCandidatesData([]);
+      } catch (err: any) {
+        alert(err?.message || "Delete failed");
       }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (activeTab === "parties") {
-      if (editingItem) {
-        setPartiesData(partiesData.map(p => p.id === editingItem.id ? {
-          ...p,
+    try {
+      if (activeTab === "parties") {
+        const body = {
           name: formData.name,
-          short: formData.short,
+          acronym: formData.short,
           leader: formData.leader,
           wilaya_siege: formData.wilaya,
-          founded: formData.founded
-        } : p));
+          founded: formData.founded,
+        };
+        if (editingItem) {
+          const apiId = editingItem._id || editingItem.id;
+          await mutation.mutate("PUT", `/parties/${apiId}`, body);
+        } else {
+          await mutation.mutate("POST", "/parties", body);
+        }
+        setPartiesData([]); // trigger refetch
       } else {
-        setPartiesData([{
-          id: partiesData.length + 1,
-          name: formData.name,
-          short: formData.short,
-          leader: formData.leader,
-          wilaya_siege: formData.wilaya,
-          founded: formData.founded
-        }, ...partiesData]);
+        // Find wilaya ID from name for the API
+        const selectedWilaya = wilayasData.find(w => 
+          w.name === formData.wilaya || w.name_fr === formData.wilaya || w.name_ar === formData.wilaya
+        );
+        
+        // Use FormData for candidate (to include image)
+        const fData = new FormData();
+        fData.append("full_name", formData.name);
+        fData.append("nin", formData.nin);
+        fData.append("phone", formData.phone);
+        fData.append("date_of_birth", formData.birthday);
+        if (editingItem?.party_id) fData.append("party", editingItem.party_id);
+        if (selectedWilaya?._id) fData.append("wilaya", selectedWilaya._id);
+        fData.append("is_favorite", String(formData.fav));
+        
+        if (formData.imageFile) {
+          fData.append("image", formData.imageFile);
+        }
+
+        if (editingItem) {
+          const apiId = editingItem._id || editingItem.id;
+          await mutation.mutate("PUT", `/candidats/${apiId}`, fData);
+        } else {
+          await mutation.mutate("POST", "/candidats", fData);
+        }
+        setCandidatesData([]); // trigger refetch
       }
-    } else {
-      if (editingItem) {
-        setCandidatesData(candidatesData.map(c => c.id === editingItem.id ? {
-          ...c,
-          full_name: formData.name,
-          party: formData.short || "Indépendant",
-          wilaya: formData.wilaya,
-          nin: formData.nin,
-          phone: formData.phone,
-          birthday: formData.birthday,
-          fav: formData.fav
-        } : c));
-      } else {
-        setCandidatesData([{
-          id: candidatesData.length + 1,
-          full_name: formData.name,
-          party: formData.short || "Indépendant",
-          wilaya: formData.wilaya,
-          nin: formData.nin,
-          phone: formData.phone,
-          birthday: formData.birthday,
-          fav: formData.fav,
-          result: 0
-        }, ...candidatesData]);
-      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert(err?.message || "Operation failed");
     }
-    setIsModalOpen(false);
   };
 
   const tabs = [
@@ -277,12 +312,34 @@ export default function EntitesPolitiques() {
                   <label htmlFor="fav" className="text-[11px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer">{language === 'ar' ? 'تأكيد الأهلية' : 'Éligibilité Confirmée'}</label>
                 </div>
               </div>
-              <div className="p-8 border-2 border-dashed border-zinc-200 dark:border-white/5 rounded-2xl flex flex-col items-center gap-3 text-zinc-400 dark:bg-white/5 group hover:border-emerald-500/30 transition-all cursor-pointer">
-                <UserPlus size={32} className="group-hover:text-emerald-500 transition-all" />
-                <div className="text-center">
-                  <span className="text-[10px] font-black uppercase tracking-widest block">{language === 'ar' ? 'الصورة الرسمية' : 'Portrait Officiel'}</span>
-                  <span className="text-[9px] font-medium opacity-50">PNG, JPG (Max. 2MB)</span>
-                </div>
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="p-8 border-2 border-dashed border-zinc-200 dark:border-white/5 rounded-2xl flex flex-col items-center gap-3 text-zinc-400 dark:bg-white/5 group hover:border-emerald-500/30 transition-all cursor-pointer relative overflow-hidden"
+              >
+                {formData.imagePreview ? (
+                  <div className="absolute inset-0">
+                    <img src={formData.imagePreview} alt="Preview" className="w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                      <Camera size={24} className="text-white drop-shadow-md" />
+                      <span className="text-[10px] font-black uppercase text-white drop-shadow-md">{language === 'ar' ? 'تغيير الصورة' : 'Changer la Photo'}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <UserPlus size={32} className="group-hover:text-emerald-500 transition-all" />
+                    <div className="text-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest block">{language === 'ar' ? 'الصورة الرسمية' : 'Portrait Officiel'}</span>
+                      <span className="text-[9px] font-medium opacity-50">PNG, JPG (Max. 2MB)</span>
+                    </div>
+                  </>
+                )}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
               </div>
             </div>
           )}
@@ -338,8 +395,22 @@ export default function EntitesPolitiques() {
                 columns={[
                   { header: language === 'ar' ? 'المترشح' : "Candidat", accessor: "full_name", render: (val, row: any) => (
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-400">
-                        {row.fav ? <Medal size={20} className="text-emerald-500 fill-emerald-500/20" /> : <UserSquare size={20} />}
+                      <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {row._id ? (
+                          <img 
+                            src={`/api/candidats/${row._id}/portrait?t=${new Date().getTime()}`} 
+                            alt={val} 
+                            className="h-full w-full object-cover" 
+                            onError={(e) => {
+                              (e.target as any).style.display = 'none';
+                              (e.target as any).parentElement.innerHTML = '<div class="text-zinc-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-square"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-1a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1"/></svg></div>';
+                            }}
+                          />
+                        ) : (
+                          <div className="text-zinc-400">
+                            {row.fav ? <Medal size={20} className="text-emerald-500 fill-emerald-500/20" /> : <UserSquare size={20} />}
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col">
                         <span className="font-black text-zinc-900 dark:text-white tracking-tight leading-tight">{val}</span>

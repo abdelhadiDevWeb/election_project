@@ -10,27 +10,34 @@ import {
   ArrowRight, 
   Eye, 
   EyeOff,
-  Fingerprint
+  AlertCircle
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login, isLoading: authLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate login delay
-    setTimeout(() => {
-      setIsLoading(false);
+    setError(null);
+    try {
+      await login(formData.email, formData.password);
       router.push("/");
-    }, 1500);
+    } catch (err: any) {
+      setError(err?.message || "Authentication failed. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -73,6 +80,18 @@ export default function LoginPage() {
             <p className="text-zinc-500 text-[13px] mt-1">Authenticate to continue</p>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-2"
+            >
+              <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+              <span className="text-[12px] font-bold text-red-400">{error}</span>
+            </motion.div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Email Identifier</label>
@@ -86,7 +105,7 @@ export default function LoginPage() {
                   placeholder="admin@anie.dz"
                   className="w-full h-[50px] pl-11 pr-4 rounded-[12px] bg-white/[0.03] border border-white/10 text-white placeholder:text-zinc-700 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-sm font-medium"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => { setFormData({...formData, email: e.target.value}); setError(null); }}
                 />
               </div>
             </div>
@@ -103,7 +122,7 @@ export default function LoginPage() {
                   placeholder="••••••••••••"
                   className="w-full h-[50px] pl-11 pr-11 rounded-[12px] bg-white/[0.03] border border-white/10 text-white placeholder:text-zinc-700 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-sm font-medium"
                   value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  onChange={(e) => { setFormData({...formData, password: e.target.value}); setError(null); }}
                 />
                 <button 
                   type="button"

@@ -1,12 +1,14 @@
 "use client";
 
-import { Bell, Search, User, Sun, Moon, Activity, Globe, ShieldCheck, Menu } from "lucide-react";
+import { Bell, Search, User, Sun, Moon, Activity, Globe, ShieldCheck, Menu, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useData } from "../context/DataContext";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { useAuth } from "@/app/context/AuthContext";
+import { useNotifications } from "@/lib/hooks/useNotifications";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 interface HeaderProps {
@@ -15,9 +17,14 @@ interface HeaderProps {
 
 export default function Header({ toggleSidebar }: HeaderProps) {
   const [isDark, setIsDark] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { electionScope, setElectionScope } = useData();
   const { t, language } = useLanguage();
+  const { user, logout } = useAuth();
+  const { data: notifications } = useNotifications({ read: false, limit: 10 });
+  const unreadCount = Array.isArray(notifications) ? notifications.length : 0;
 
   useEffect(() => {
     if (document.documentElement.classList.contains("dark")) {
@@ -110,23 +117,53 @@ export default function Header({ toggleSidebar }: HeaderProps) {
 
           <button className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-white/10 text-zinc-500 relative transition-all">
             <Bell size={18} />
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-algerian-red border-2 border-white dark:border-[#09090b] animate-pulse"></span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-algerian-red border-2 border-white dark:border-[#09090b] text-[8px] font-black text-white flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
         </div>
 
         <div className="hidden sm:block h-8 w-[1px] bg-zinc-200 dark:bg-white/10 mx-1"></div>
 
-        <div className="flex items-center gap-3 group cursor-pointer ps-1 sm:ps-2">
+        <div className="flex items-center gap-3 group cursor-pointer ps-1 sm:ps-2 relative"
+             onClick={() => setShowUserMenu(!showUserMenu)}
+        >
           <div className="hidden md:flex flex-col items-end">
-            <span className="text-sm font-black text-zinc-900 dark:text-white leading-tight">{t("user.admin_central")}</span>
+            <span className="text-sm font-black text-zinc-900 dark:text-white leading-tight">{user?.full_name || t("user.admin_central")}</span>
             <div className="flex items-center gap-1.5">
               <ShieldCheck size={10} className="text-algerian-green dark:text-algerian-green-light" />
-              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{language === 'ar' ? 'العمليات' : 'Opérations'}</span>
+              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">
+                {user?.role === 'super_admin' ? 'Super Admin'
+                  : user?.role === 'admin_wilaya' ? 'Admin Wilaya'
+                  : user?.role === 'admin_commun' ? 'Admin Commun'
+                  : user?.role || (language === 'ar' ? 'العمليات' : 'Opérations')}
+              </span>
             </div>
           </div>
           <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-algerian-green to-algerian-green-light flex items-center justify-center text-white group-hover:scale-105 transition-transform duration-300 ring-2 ring-offset-2 ring-transparent group-hover:ring-algerian-green/20 dark:ring-offset-black flex-shrink-0">
             <User size={20} strokeWidth={2.5} className="sm:h-[22px] sm:w-[22px]" />
           </div>
+          {/* Dropdown menu */}
+          {showUserMenu && (
+            <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-white/10 shadow-xl p-2 z-50">
+              <div className="px-3 py-2 border-b border-zinc-100 dark:border-white/5 mb-1">
+                <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">{user?.email}</p>
+              </div>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await logout();
+                  router.push('/login');
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut size={14} />
+                {language === 'ar' ? 'تسجيل الخروج' : 'Déconnexion'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

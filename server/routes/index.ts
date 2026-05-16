@@ -1,45 +1,171 @@
 import { Router } from "express";
-import Joi from "joi";
-import jwt from "jsonwebtoken";
-
-import { env } from "../config/env";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireRoles } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import { authLimiter } from "../middleware/rateLimiters";
+import { scopeGuard } from "../middleware/scopeGuard";
+import { authLimiter, writeLimiter, uploadLimiter } from "../middleware/rateLimiters";
+import { uploadImage, uploadMessageFiles } from "../middleware/upload";
+
+// ── Auth ──
+import * as authCtrl from "../modules/auth/auth.controller";
+import { loginSchema } from "../modules/auth/auth.validator";
+
+// ── Wilaya & Commune ──
+import * as wilayaCtrl from "../modules/wilaya/wilaya.controller";
+import * as wilayaVal from "../modules/wilaya/wilaya.validator";
+import * as communeCtrl from "../modules/commune/commune.controller";
+import * as communeVal from "../modules/commune/commune.validator";
+
+// ── Admins ──
+import * as superAdminCtrl from "../modules/super-admin/super-admin.controller";
+import * as superAdminVal from "../modules/super-admin/super-admin.validator";
+import * as adminWilayaCtrl from "../modules/admin-wilaya/admin-wilaya.controller";
+import * as adminWilayaVal from "../modules/admin-wilaya/admin-wilaya.validator";
+import * as adminCommunCtrl from "../modules/admin-commun/admin-commun.controller";
+import * as adminCommunVal from "../modules/admin-commun/admin-commun.validator";
+
+// ── Entities ──
+import * as partiesCtrl from "../modules/parties/parties.controller";
+import * as partiesVal from "../modules/parties/parties.validator";
+import * as candidatsCtrl from "../modules/candidats/candidats.controller";
+import * as candidatsVal from "../modules/candidats/candidats.validator";
+import * as memberActifCtrl from "../modules/member-actif/member-actif.controller";
+import * as memberActifVal from "../modules/member-actif/member-actif.validator";
+import * as citizenCtrl from "../modules/citizen/citizen.controller";
+import * as citizenVal from "../modules/citizen/citizen.validator";
+
+// ── Infrastructure ──
+import * as centerCtrl from "../modules/center/center.controller";
+import * as centerVal from "../modules/center/center.validator";
+import * as deskCtrl from "../modules/desk/desk.controller";
+import * as deskVal from "../modules/desk/desk.validator";
+import * as roleEdCtrl from "../modules/role-election-day/role-election-day.controller";
+import * as roleEdVal from "../modules/role-election-day/role-election-day.validator";
+
+// ── Results ──
+import * as resultDeskCtrl from "../modules/result-desk/result-desk.controller";
+import * as resultDeskVal from "../modules/result-desk/result-desk.validator";
+
+// ── Messaging ──
+import * as messageCtrl from "../modules/message/message.controller";
+import * as messageVal from "../modules/message/message.validator";
+import * as notifCtrl from "../modules/notification/notification.controller";
+import * as notifVal from "../modules/notification/notification.validator";
 
 export const apiRouter = Router();
 
-apiRouter.get("/health", (req, res) => {
-  res.status(200).json({ ok: true });
-});
+// ────────────────────────── Health ──────────────────────────
+apiRouter.get("/health", (_req, res) => res.json({ ok: true }));
 
-// Example auth endpoint (replace with your real user lookup + bcrypt compare).
-apiRouter.post(
-  "/auth/token",
-  authLimiter,
-  validate(
-    Joi.object({
-      body: Joi.object({
-        userId: Joi.string().min(1).required(),
-        roles: Joi.array().items(Joi.string()).default([]),
-      }).required(),
-    })
-  ),
-  (req, res) => {
-    const { userId, roles } = req.body as { userId: string; roles: string[] };
+// ────────────────────────── Auth ────────────────────────────
+apiRouter.post("/auth/login", authLimiter, validate(loginSchema), authCtrl.loginHandler);
+apiRouter.post("/auth/refresh", authLimiter, authCtrl.refreshHandler);
+apiRouter.post("/auth/logout", authCtrl.logoutHandler);
+apiRouter.get("/auth/me", requireAuth, authCtrl.meHandler);
 
-    const token = jwt.sign({ roles }, env.jwt.accessSecret, {
-      subject: userId,
-      issuer: env.jwt.issuer,
-      audience: env.jwt.audience,
-      expiresIn: "15m",
-    });
+// ────────────────────────── Wilayas (public) ────────────────
+apiRouter.get("/wilayas", validate(wilayaVal.listSchema), wilayaCtrl.list);
+apiRouter.get("/wilayas/:id", validate(wilayaVal.getByIdSchema), wilayaCtrl.getById);
+apiRouter.get("/wilayas/:id/communes", validate(wilayaVal.getByIdSchema), wilayaCtrl.getCommunes);
 
-    res.status(200).json({ ok: true, accessToken: token });
-  }
-);
+// ────────────────────────── Communes (public) ───────────────
+apiRouter.get("/communes", validate(communeVal.listSchema), communeCtrl.list);
+apiRouter.get("/communes/:id", validate(communeVal.getByIdSchema), communeCtrl.getById);
 
-apiRouter.get("/me", requireAuth, (req, res) => {
-  res.status(200).json({ ok: true, user: req.user });
-});
+// ────────────────────────── Super Admins ────────────────────
+apiRouter.get("/super-admins", requireAuth, requireRoles("super_admin"), validate(superAdminVal.listSchema), superAdminCtrl.list);
+apiRouter.get("/super-admins/:id", requireAuth, requireRoles("super_admin"), validate(superAdminVal.getByIdSchema), superAdminCtrl.getById);
+apiRouter.post("/super-admins", requireAuth, requireRoles("super_admin"), writeLimiter, validate(superAdminVal.createSchema), superAdminCtrl.create);
+apiRouter.put("/super-admins/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(superAdminVal.updateSchema), superAdminCtrl.update);
+apiRouter.delete("/super-admins/:id", requireAuth, requireRoles("super_admin"), writeLimiter, superAdminCtrl.remove);
 
+// ────────────────────────── Admin Wilaya ────────────────────
+apiRouter.get("/admin-wilayas", requireAuth, requireRoles("super_admin"), validate(adminWilayaVal.listSchema), adminWilayaCtrl.list);
+apiRouter.get("/admin-wilayas/:id", requireAuth, requireRoles("super_admin"), validate(adminWilayaVal.getByIdSchema), adminWilayaCtrl.getById);
+apiRouter.post("/admin-wilayas", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminWilayaVal.createSchema), adminWilayaCtrl.create);
+apiRouter.put("/admin-wilayas/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminWilayaVal.updateSchema), adminWilayaCtrl.update);
+apiRouter.delete("/admin-wilayas/:id", requireAuth, requireRoles("super_admin"), writeLimiter, adminWilayaCtrl.remove);
+
+// ────────────────────────── Admin Commun ────────────────────
+apiRouter.get("/admin-communs", requireAuth, requireRoles("super_admin"), validate(adminCommunVal.listSchema), adminCommunCtrl.list);
+apiRouter.get("/admin-communs/:id", requireAuth, requireRoles("super_admin"), validate(adminCommunVal.getByIdSchema), adminCommunCtrl.getById);
+apiRouter.post("/admin-communs", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminCommunVal.createSchema), adminCommunCtrl.create);
+apiRouter.put("/admin-communs/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminCommunVal.updateSchema), adminCommunCtrl.update);
+apiRouter.delete("/admin-communs/:id", requireAuth, requireRoles("super_admin"), writeLimiter, adminCommunCtrl.remove);
+
+// ────────────────────────── Parties ─────────────────────────
+apiRouter.get("/parties", requireAuth, validate(partiesVal.listSchema), scopeGuard(), partiesCtrl.list);
+apiRouter.get("/parties/:id", requireAuth, validate(partiesVal.getByIdSchema), partiesCtrl.getById);
+apiRouter.post("/parties", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(partiesVal.createSchema), scopeGuard(), partiesCtrl.create);
+apiRouter.put("/parties/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(partiesVal.updateSchema), partiesCtrl.update);
+apiRouter.delete("/parties/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, partiesCtrl.remove);
+
+// ────────────────────────── Candidats ───────────────────────
+apiRouter.get("/candidats", requireAuth, validate(candidatsVal.listSchema), scopeGuard(), candidatsCtrl.list);
+apiRouter.get("/candidats/:id", requireAuth, validate(candidatsVal.getByIdSchema), candidatsCtrl.getById);
+apiRouter.get("/candidats/:id/portrait", candidatsCtrl.getPortrait);
+apiRouter.post("/candidats", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, uploadImage.single("image"), validate(candidatsVal.createSchema), scopeGuard(), candidatsCtrl.create);
+apiRouter.put("/candidats/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, uploadImage.single("image"), validate(candidatsVal.updateSchema), candidatsCtrl.update);
+apiRouter.delete("/candidats/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, candidatsCtrl.remove);
+
+// ────────────────────────── Members Actifs ──────────────────
+apiRouter.get("/members-actifs", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), validate(memberActifVal.listSchema), scopeGuard(), memberActifCtrl.list);
+apiRouter.get("/members-actifs/:id", requireAuth, validate(memberActifVal.getByIdSchema), memberActifCtrl.getById);
+apiRouter.post("/members-actifs", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, validate(memberActifVal.createSchema), scopeGuard(), memberActifCtrl.create);
+apiRouter.put("/members-actifs/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, validate(memberActifVal.updateSchema), memberActifCtrl.update);
+apiRouter.delete("/members-actifs/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, memberActifCtrl.remove);
+
+// ────────────────────────── Citizens ────────────────────────
+apiRouter.get("/citizens", requireAuth, requireRoles("super_admin", "admin_commun", "member_actif"), validate(citizenVal.listSchema), citizenCtrl.list);
+apiRouter.get("/citizens/:id", requireAuth, validate(citizenVal.getByIdSchema), citizenCtrl.getById);
+apiRouter.post("/citizens", requireAuth, requireRoles("super_admin", "admin_commun", "member_actif"), writeLimiter, validate(citizenVal.createSchema), citizenCtrl.create);
+apiRouter.put("/citizens/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(citizenVal.updateSchema), citizenCtrl.update);
+apiRouter.delete("/citizens/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, citizenCtrl.remove);
+
+// ────────────────────────── Centers ─────────────────────────
+apiRouter.get("/centers", requireAuth, validate(centerVal.listSchema), scopeGuard(), centerCtrl.list);
+apiRouter.get("/centers/:id", requireAuth, validate(centerVal.getByIdSchema), centerCtrl.getById);
+apiRouter.post("/centers", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(centerVal.createSchema), scopeGuard(), centerCtrl.create);
+apiRouter.put("/centers/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(centerVal.updateSchema), centerCtrl.update);
+apiRouter.delete("/centers/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, centerCtrl.remove);
+
+// ────────────────────────── Desks ───────────────────────────
+apiRouter.get("/desks", requireAuth, validate(deskVal.listSchema), deskCtrl.list);
+apiRouter.get("/desks/:id", requireAuth, validate(deskVal.getByIdSchema), deskCtrl.getById);
+apiRouter.post("/desks", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(deskVal.createSchema), deskCtrl.create);
+apiRouter.put("/desks/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(deskVal.updateSchema), deskCtrl.update);
+apiRouter.delete("/desks/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, deskCtrl.remove);
+
+// ────────────────────────── Roles Election Day ──────────────
+apiRouter.get("/roles-election-day", requireAuth, requireRoles("super_admin", "admin_wilaya"), validate(roleEdVal.listSchema), scopeGuard(), roleEdCtrl.list);
+apiRouter.get("/roles-election-day/:id", requireAuth, validate(roleEdVal.getByIdSchema), roleEdCtrl.getById);
+apiRouter.post("/roles-election-day", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(roleEdVal.createSchema), scopeGuard(), roleEdCtrl.create);
+apiRouter.put("/roles-election-day/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(roleEdVal.updateSchema), roleEdCtrl.update);
+apiRouter.delete("/roles-election-day/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, roleEdCtrl.remove);
+
+// ────────────────────────── Results ─────────────────────────
+apiRouter.post("/results/desk", requireAuth, requireRoles("role_election_day"), uploadLimiter, uploadImage.single("image"), validate(resultDeskVal.submitDeskSchema), resultDeskCtrl.submitDesk);
+apiRouter.get("/results/desk", requireAuth, validate(resultDeskVal.listDeskSchema), resultDeskCtrl.listDesk);
+apiRouter.get("/results/desk/:id", requireAuth, validate(resultDeskVal.getByIdSchema), resultDeskCtrl.getDeskById);
+apiRouter.put("/results/desk/:id/status", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(resultDeskVal.updateStatusSchema), resultDeskCtrl.updateDeskStatus);
+apiRouter.post("/results/desk/:id/ocr", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, resultDeskCtrl.triggerOcr);
+apiRouter.post("/results/desk/:id/human-review", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, resultDeskCtrl.requestHumanReview);
+
+apiRouter.post("/results/center", requireAuth, requireRoles("role_election_day"), uploadLimiter, uploadImage.single("image"), validate(resultDeskVal.submitCenterSchema), resultDeskCtrl.submitCenter);
+apiRouter.get("/results/center", requireAuth, validate(resultDeskVal.listCenterSchema), resultDeskCtrl.listCenter);
+apiRouter.get("/results/center/:id", requireAuth, validate(resultDeskVal.getByIdSchema), resultDeskCtrl.getCenterById);
+
+apiRouter.get("/results/aggregate/center/:centerId", requireAuth, resultDeskCtrl.aggregateByCenter);
+apiRouter.get("/results/aggregate/wilaya/:wilayaId", requireAuth, resultDeskCtrl.aggregateByWilaya);
+apiRouter.get("/results/aggregate/national", requireAuth, resultDeskCtrl.aggregateNational);
+
+// ────────────────────────── Messages ────────────────────────
+apiRouter.post("/messages", requireAuth, writeLimiter, uploadMessageFiles.fields([{ name: "images", maxCount: 5 }, { name: "video", maxCount: 1 }, { name: "pdf", maxCount: 1 }]), validate(messageVal.sendSchema), messageCtrl.send);
+apiRouter.get("/messages", requireAuth, validate(messageVal.listSchema), messageCtrl.list);
+apiRouter.get("/messages/:id", requireAuth, validate(messageVal.getByIdSchema), messageCtrl.getById);
+apiRouter.put("/messages/:id/read", requireAuth, messageCtrl.markRead);
+
+// ────────────────────────── Notifications ───────────────────
+apiRouter.get("/notifications", requireAuth, validate(notifVal.listSchema), notifCtrl.list);
+apiRouter.put("/notifications/:id/read", requireAuth, notifCtrl.markRead);
+apiRouter.put("/notifications/read-all", requireAuth, notifCtrl.markAllRead);
+apiRouter.post("/notifications", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(notifVal.createSchema), notifCtrl.create);

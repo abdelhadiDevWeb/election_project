@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { DataProvider } from "./context/DataContext";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
@@ -13,7 +15,34 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { dir } = useLanguage();
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-[#09090b]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-3 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+          <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">
+            Initializing Secure Session...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render dashboard if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <DataProvider>

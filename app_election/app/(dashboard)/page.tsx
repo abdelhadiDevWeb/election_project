@@ -16,13 +16,17 @@ import {
   Activity,
   Zap,
   Globe,
-  Database
+  Database,
+  Loader2
 } from "lucide-react";
 import StatCard from "./components/StatCard";
 import { motion } from "framer-motion";
 import { useData } from "./context/DataContext";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { useSocket } from "@/lib/hooks/useSocket";
+import { useAggregateNational } from "@/lib/hooks/useResults";
+import { useNotifications } from "@/lib/hooks/useNotifications";
 
 export default function Dashboard() {
   const { 
@@ -34,17 +38,45 @@ export default function Dashboard() {
     candidatesData, 
     adminsData, 
     membersData, 
-    observersData 
+    observersData,
+    isLoading
   } = useData();
   const { t, language, dir } = useLanguage();
+  const { isConnected, events: socketEvents } = useSocket();
+  const { data: aggregateData } = useAggregateNational();
+  const { data: notificationsRaw } = useNotifications({ limit: 5 });
 
-  const recentActivity = [
-    { id: 1, type: "success", title: language === 'ar' ? "تم التحقق من محضر التصويت" : "PV de Vote Validé", bureau: language === 'ar' ? "مكتب 04 - مركز ابن باديس" : "Bureau 04 - Centre Ibn Badis", location: language === 'ar' ? "الجزائر، سيدي امحمد" : "Alger, Sidi M'hamed", time: language === 'ar' ? "2 د" : "2 min" },
-    { id: 2, type: "warning", title: language === 'ar' ? "تم كشف فرق في الإدخال" : "Écart de Saisie Détecté", bureau: language === 'ar' ? "مكتب 12 - مركز السانية" : "Bureau 12 - Centre Es Senia", location: language === 'ar' ? "وهران، السانية" : "Oran, Es Senia", time: language === 'ar' ? "5 د" : "5 min" },
-    { id: 3, type: "success", title: language === 'ar' ? "تم تقديم محضر الاقتراع" : "PV de Scrutin Soumis", bureau: language === 'ar' ? "مكتب 01 - مركز 1 نوفمبر" : "Bureau 01 - Centre 1er Novembre", location: language === 'ar' ? "قسنطينة، الخروب" : "Constantine, El Khroub", time: language === 'ar' ? "12 د" : "12 min" },
-    { id: 4, type: "info", title: language === 'ar' ? "افتتاح المكتب 08" : "Ouverture du Bureau 08", bureau: language === 'ar' ? "مكتب 08 - مركز باستور" : "Bureau 08 - Centre Pasteur", location: language === 'ar' ? "بجاية، أقبو" : "Bejaia, Akbou", time: language === 'ar' ? "45 د" : "45 min" },
-  ];
+  // Use socket events if available, otherwise fallback to notifications
+  const recentActivity = socketEvents.length > 0
+    ? socketEvents.slice(0, 4).map((ev, i) => ({
+        id: ev.id,
+        type: ev.type,
+        title: ev.title,
+        bureau: ev.detail || "",
+        location: ev.location || "",
+        time: ev.time,
+      }))
+    : (notificationsRaw && Array.isArray(notificationsRaw)
+      ? notificationsRaw.slice(0, 4).map((n: any) => ({
+          id: n._id || n.id,
+          type: n.type === "alert" ? "warning" : "success",
+          title: n.title,
+          bureau: n.body || "",
+          location: "",
+          time: formatTimeAgo(new Date(n.createdAt || Date.now())),
+        }))
+      : [
+          { id: "1", type: "info", title: language === 'ar' ? "في انتظار البيانات المباشرة..." : "Awaiting live data...", bureau: language === 'ar' ? "النظام متصل" : "System Connected", location: "", time: "—" },
+        ]
+    );
 
+  // Get aggregate KPIs from API
+  const nationalRate = aggregateData?.total_voters
+    ? ((aggregateData.total_voters - (aggregateData.total_white || 0) - (aggregateData.total_null || 0)) / aggregateData.total_voters * 100).toFixed(1)
+    : "0.0";
+  const totalValidated = aggregateData?.results?.reduce((sum: number, r: any) => sum + r.total_votes, 0) || 0;
+  const totalDisputes = aggregateData?.total_null || 0;
+  const totalPending = aggregateData?.total_white || 0;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -55,6 +87,29 @@ export default function Dashboard() {
       }
     }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-12 pb-20 animate-pulse">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+          <div className="space-y-3 flex-1">
+            <div className="h-6 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+            <div className="h-10 w-96 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+            <div className="h-5 w-64 bg-zinc-100 dark:bg-zinc-800/50 rounded-lg" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="h-32 bg-zinc-100 dark:bg-zinc-800/50 rounded-3xl" />
+          ))}
+        </div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={24} className="animate-spin text-zinc-400" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12 pb-20">
@@ -85,13 +140,17 @@ export default function Dashboard() {
           <div className="px-6 py-3 border-r border-zinc-100 dark:border-white/5">
             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">{language === 'ar' ? 'الحالة العامة' : 'Status Global'}</p>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">{language === 'ar' ? 'متزامن' : 'Synchronisé'}</span>
+              <div className={cn("h-2 w-2 rounded-full", isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
+              <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">
+                {isConnected ? (language === 'ar' ? 'متزامن' : 'Synchronisé') : (language === 'ar' ? 'غير متصل' : 'Offline')}
+              </span>
             </div>
           </div>
           <div className="px-6 py-3">
             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">{language === 'ar' ? 'تحديث' : 'Mise à jour'}</p>
-            <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">{language === 'ar' ? 'فوري' : 'INSTANTANÉ'}</span>
+            <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">
+              {isConnected ? (language === 'ar' ? 'فوري' : 'INSTANTANÉ') : (language === 'ar' ? 'يدوي' : 'MANUEL')}
+            </span>
           </div>
         </motion.div>
       </div>
@@ -137,12 +196,12 @@ export default function Dashboard() {
               <div className="space-y-4">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">{language === 'ar' ? 'المعدل الوطني' : 'Taux National'}</span>
-                  <span className="text-5xl font-black tracking-tighter text-algerian-green dark:text-white">78.3<span className="text-2xl">%</span></span>
+                  <span className="text-5xl font-black tracking-tighter text-algerian-green dark:text-white">{nationalRate}<span className="text-2xl">%</span></span>
                 </div>
                 <div className="h-2 w-full bg-zinc-100 dark:bg-white/5 rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: "78.3%" }}
+                    animate={{ width: `${nationalRate}%` }}
                     transition={{ duration: 1.5, ease: "circOut" }}
                     className="h-full bg-gradient-to-r from-algerian-green to-algerian-green-light"
                   />
@@ -151,9 +210,9 @@ export default function Dashboard() {
 
               <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { label: language === 'ar' ? "تمت المصادقة" : "Validés", value: "48,210", color: "text-emerald-500", icon: CheckCircle2 },
-                  { label: language === 'ar' ? "نزاعات" : "Litiges", value: "1,190", color: "text-algerian-red", icon: AlertCircle },
-                  { label: language === 'ar' ? "في الانتظار" : "Attente", value: "12,143", color: "text-amber-500", icon: Clock },
+                  { label: language === 'ar' ? "تمت المصادقة" : "Validés", value: totalValidated.toLocaleString(), color: "text-emerald-500", icon: CheckCircle2 },
+                  { label: language === 'ar' ? "نزاعات" : "Litiges", value: totalDisputes.toLocaleString(), color: "text-algerian-red", icon: AlertCircle },
+                  { label: language === 'ar' ? "في الانتظار" : "Attente", value: totalPending.toLocaleString(), color: "text-amber-500", icon: Clock },
                 ].map((item, i) => (
                   <div key={i} className="glass dark:bg-white/5 p-4 rounded-2xl border-white/5 flex flex-col items-center justify-center text-center group hover:bg-white dark:hover:bg-white/10 transition-all duration-300">
                     <item.icon size={20} className={cn("mb-2 opacity-50 group-hover:opacity-100 transition-opacity", item.color)} />
@@ -194,14 +253,14 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="h-8 w-24 bg-zinc-50 dark:bg-white/5 rounded-lg flex items-center justify-center">
-                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                   <div className={cn("h-2 w-2 rounded-full", isConnected ? "bg-emerald-500 animate-ping" : "bg-zinc-400")} />
                 </div>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Intelligence Feed - 4 Columns */}
+        {/* Intelligence Feed - 4 Columns — Now real-time! */}
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -210,7 +269,13 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-black tracking-tight text-zinc-900 dark:text-white">{t("dash.recent.title")}</h2>
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-50 dark:bg-white/5 border border-white/5 text-[10px] font-bold text-zinc-500">
+            <div className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-bold",
+              isConnected 
+                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" 
+                : "bg-zinc-50 dark:bg-white/5 border-white/5 text-zinc-500"
+            )}>
+              {isConnected && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
               {language === 'ar' ? 'مباشر' : 'LIVE'}
             </div>
           </div>
@@ -243,10 +308,12 @@ export default function Dashboard() {
                     <span className="text-[9px] font-bold text-zinc-400 uppercase">{activity.time}</span>
                   </div>
                   <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider">{activity.bureau}</p>
-                  <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-                    <MapPin size={10} />
-                    {activity.location}
-                  </div>
+                  {activity.location && (
+                    <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+                      <MapPin size={10} />
+                      {activity.location}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -260,4 +327,14 @@ export default function Dashboard() {
       </div>
     </div>
   );
+}
+
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return "Just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
 }

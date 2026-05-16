@@ -99,7 +99,7 @@ const translations: Record<Language, Record<string, string>> = {
     "roles.obs_center": "Observateur Centre",
     "roles.admin": "Admin",
     "roles.admin_wilaya": "Admin Wilaya",
-    "roles.admin_baladia": "Admin Baladia",
+    "roles.admin_commun": "Admin Commun",
     "roles.super_admin": "Super Admin"
   },
   ar: {
@@ -189,7 +189,7 @@ const translations: Record<Language, Record<string, string>> = {
     "roles.obs_center": "مراقب مركز",
     "roles.admin": "مسؤول",
     "roles.admin_wilaya": "مسؤول ولاية",
-    "roles.admin_baladia": "مسؤول بلدية",
+    "roles.admin_commun": "مسؤول بلدية",
     "roles.super_admin": "مسؤول أعلى"
   }
 };

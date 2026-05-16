@@ -28,7 +28,8 @@ import { useLanguage } from "@/app/context/LanguageContext";
 export default function RolesElection() {
   const { 
     observersData, setObserversData,
-    centersData
+    centersData,
+    mutation
   } = useData();
   const { t, language, dir } = useLanguage();
 
@@ -37,6 +38,7 @@ export default function RolesElection() {
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
+    password: "",
     role: "obs_center",
     center: "",
     desk: "",
@@ -60,6 +62,7 @@ export default function RolesElection() {
       setNewUser({
         name: item.name,
         email: item.email || "",
+        password: "",
         role: item.role === "Observateur Centre" ? "obs_center" : "obs_desk",
         center: item.center || "",
         desk: item.desk || "",
@@ -69,45 +72,56 @@ export default function RolesElection() {
         phone: item.phone || ""
       });
     } else {
-      setNewUser({ name: "", email: "", role: "obs_center", center: "", desk: "", time: "", date: "", nin: "", phone: "" });
+      setNewUser({ name: "", email: "", password: "", role: "obs_center", center: "", desk: "", time: "", date: "", nin: "", phone: "" });
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number | string) => {
     if (confirm(language === 'ar' ? 'هل أنت متأكد من إلغاء هذا الاعتماد المؤقت؟' : "Révoquer cet accès temporaire ?")) {
-      setObserversData(observersData.filter(o => o.id !== id));
+      try {
+        const item = observersData.find(o => o.id === id || o._id === id);
+        const apiId = item?._id || item?.id || id;
+        await mutation.mutate("DELETE", `/roles-election-day/${apiId}`);
+        setObserversData([]);
+      } catch (err: any) {
+        alert(err?.message || "Delete failed");
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingItem) {
-      setObserversData(observersData.map(o => o.id === editingItem.id ? {
-        ...o,
-        name: newUser.name,
+    try {
+      const roleMap: Record<string, string> = {
+        obs_center: "observateur_centre",
+        obs_desk: "observateur_bureau",
+        chef_centre: "chef_centre",
+        scrutateur: "scrutateur",
+      };
+      const body: any = {
+        full_name: newUser.name,
         email: newUser.email,
-        role: newUser.role === "obs_center" ? (language === 'ar' ? "مراقب مركز" : "Observateur Centre") : (language === 'ar' ? "مراقب مكتب" : "Observateur Bureau"),
-        center: newUser.center,
-        desk: newUser.desk,
-        location: `${newUser.center || (language === 'ar' ? "مركز غير محدد" : "Centre Non Spécifié")}${newUser.desk ? ` - ${language === 'ar' ? 'مكتب' : 'Bureau'} ${newUser.desk}` : ""}`,
-        expires: newUser.time || o.expires
-      } : o));
-    } else {
-      setObserversData([{
-        id: observersData.length + 1,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role === "obs_center" ? (language === 'ar' ? "مراقب مركز" : "Observateur Centre") : (language === 'ar' ? "مراقب مكتب" : "Observateur Bureau"),
-        center: newUser.center,
-        desk: newUser.desk,
-        location: `${newUser.center || (language === 'ar' ? "مركز غير محدد" : "Centre Non Spécifié")}${newUser.desk ? ` - ${language === 'ar' ? 'مكتب' : 'Bureau'} ${newUser.desk}` : ""}`,
-        code: generateCode(),
-        status: language === 'ar' ? "نشط" : "Actif",
-        expires: newUser.time || "20:00"
-      }, ...observersData]);
+        phone: newUser.phone,
+        nin: newUser.nin,
+        role: roleMap[newUser.role] || "observateur_centre",
+        assigned_time: newUser.time || "20:00",
+        assigned_date: newUser.date || undefined,
+      };
+      if (newUser.password) body.password = newUser.password;
+
+      if (editingItem) {
+        const apiId = editingItem._id || editingItem.id;
+        await mutation.mutate("PUT", `/roles-election-day/${apiId}`, body);
+      } else {
+        if (!newUser.password) { alert("Password is required"); return; }
+        await mutation.mutate("POST", "/roles-election-day", body);
+      }
+      setObserversData([]);
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert(err?.message || "Operation failed");
     }
-    setIsModalOpen(false);
   };
 
   return (
