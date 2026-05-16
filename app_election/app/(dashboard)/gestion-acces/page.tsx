@@ -161,7 +161,10 @@ export default function GestionAcces() {
           const apiId = editingItem._id || editingItem.id;
           await mutation.mutate("PUT", `/members-actifs/${apiId}`, body);
         } else {
-          if (!newUser.password) { alert("Password is required"); return; }
+          if (!newUser.password) { alert(language === 'ar' ? 'كلمة المرور مطلوبة' : "Le mot de passe est requis"); return; }
+          if (!newUser.wilaya) { alert(language === 'ar' ? 'الولاية مطلوبة' : "La Wilaya est requise"); return; }
+          if (!newUser.baladia) { alert(language === 'ar' ? 'البلدية مطلوبة' : "La Commune est requise"); return; }
+          if (!newUser.birthday) { alert(language === 'ar' ? 'تاريخ الميلاد مطلوب' : "La date de naissance est requise"); return; }
           await mutation.mutate("POST", "/members-actifs", body);
         }
         setMembersData([]);
@@ -323,6 +326,16 @@ export default function GestionAcces() {
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'اسم العضو النشط' : 'Nom du Membre Actif'}</label>
                 <input required type="text" placeholder={language === 'ar' ? 'الاسم واللقب' : "Prénom et Nom"} className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'البريد الإلكتروني' : 'Email'}</label>
+                  <input required type="email" placeholder="example@mail.com" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الهاتف' : 'Téléphone'}</label>
+                  <input required type="tel" placeholder="05/06/07..." className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.phone} onChange={(e) => setNewUser({...newUser, phone: e.target.value})} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

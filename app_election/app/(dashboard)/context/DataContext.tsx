@@ -116,15 +116,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [electionScope, setElectionScope] = React.useState<ElectionScope>("national");
 
   // ── API Queries ───────────────────────────────────────────────
-  const wilayasQ = useQuery<IWilaya[]>("/wilayas");
-  const communesQ = useQuery<ICommune[]>("/communes");
-  const centersQ = useQuery<ICenter[]>("/centers");
-  const desksQ = useQuery<IDesk[]>("/desks");
-  const partiesQ = useQuery<IParty[]>("/parties");
-  const candidatsQ = useQuery<ICandidat[]>("/candidats");
-  const adminWilayaQ = useQuery<IAdminWilaya[]>("/admin-wilayas");
-  const adminCommunQ = useQuery<IAdminCommun[]>("/admin-communs");
-  const membersQ = useQuery<IMemberActif[]>("/members-actifs");
+  const wilayasQ = useQuery<IWilaya[]>("/wilayas", { limit: 100 });
+  const communesQ = useQuery<ICommune[]>("/communes", { limit: 2000 });
+  const centersQ = useQuery<ICenter[]>("/centers", { limit: 5000 });
+  const desksQ = useQuery<IDesk[]>("/desks", { limit: 5000 });
+  const partiesQ = useQuery<IParty[]>("/parties", { limit: 500 });
+  const candidatsQ = useQuery<ICandidat[]>("/candidats", { limit: 1000 });
+  const adminWilayaQ = useQuery<IAdminWilaya[]>("/admin-wilayas", { limit: 100 });
+  const adminCommunQ = useQuery<IAdminCommun[]>("/admin-communs", { limit: 1000 });
+  const membersQ = useQuery<IMemberActif[]>("/members-actifs", { limit: 5000 });
   const rolesQ = useQuery<IRoleElectionDay[]>("/roles-election-day");
   const resultsQ = useQuery<any[]>("/results/desk");
 
@@ -135,63 +135,86 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Wilayas: map to UI format
   const wilayasData = React.useMemo(() => {
     if (!wilayasQ.data) return [];
-    return (wilayasQ.data as IWilaya[]).map((w) => ({
-      id: w.id || w._id,
-      name: w.name_ar || w.name_fr,
-      name_fr: w.name_fr,
-      name_ar: w.name_ar,
-      num_wilaya: String(w.wilaya_code).padStart(2, "0"),
-      seats_count: w.seats_count || 0,
-      communes: 0,
-      centers: 0,
-      desks: 0,
-      _id: String(w.id || w._id || ""),
-    }));
-  }, [wilayasQ.data]);
+    return (wilayasQ.data as IWilaya[]).map((w) => {
+      const wId = String(w.id || w._id);
+      return {
+        id: wId,
+        name: w.name_ar || w.name_fr,
+        name_fr: w.name_fr,
+        name_ar: w.name_ar,
+        num_wilaya: String(w.wilaya_code).padStart(2, "0"),
+        seats_count: w.seats_count || 0,
+        communes: ((communesQ.data as any[]) || [])?.filter(c => String(c.wilaya?._id || c.wilaya?.id || c.wilaya) === wId).length || 0,
+        centers: ((centersQ.data as any[]) || [])?.filter(c => String(c.wilaya?._id || c.wilaya?.id || c.wilaya) === wId).length || 0,
+        desks: ((desksQ.data as any[]) || [])?.filter(d => {
+          const center = d.center;
+          if (typeof center === "object") {
+            return String(center.wilaya?._id || center.wilaya?.id || center.wilaya) === wId;
+          }
+          return false; // Complex to filter desks by wilaya if not populated
+        }).length || 0,
+        _id: wId,
+      };
+    });
+  }, [wilayasQ.data, communesQ.data, centersQ.data, desksQ.data]);
 
   // Communes
   const communesData = React.useMemo(() => {
     if (!communesQ.data) return [];
-    return (communesQ.data as ICommune[]).map((c) => ({
-      id: c.id || c._id,
-      name: c.name_ar || c.name_fr,
-      name_fr: c.name_fr,
-      name_ar: c.name_ar,
-      num_bladia: String(c.commune_id).padStart(2, "0"),
-      wilaya: typeof c.wilaya === "object" ? (c.wilaya as IWilaya).name_ar || (c.wilaya as IWilaya).name_fr : c.wilaya,
-      wilaya_id: c.wilaya ? (typeof c.wilaya === "object" ? ((c.wilaya as any).id || (c.wilaya as any)._id) : String(c.wilaya)) : "",
-      centers: 0,
-      desks: 0,
-      _id: String(c.id || c._id || ""),
-    }));
-  }, [communesQ.data]);
+    return (communesQ.data as ICommune[]).map((c) => {
+      const cId = String(c.id || c._id);
+      return {
+        id: cId,
+        name: c.name_ar || c.name_fr,
+        name_fr: c.name_fr,
+        name_ar: c.name_ar,
+        num_bladia: String(c.commune_id).padStart(2, "0"),
+        wilaya: typeof c.wilaya === "object" ? (c.wilaya as IWilaya).name_ar || (c.wilaya as IWilaya).name_fr : c.wilaya,
+        wilaya_id: c.wilaya ? String(typeof c.wilaya === "object" ? ((c.wilaya as any).id || (c.wilaya as any)._id) : c.wilaya) : "",
+        centers: ((centersQ.data as any[]) || [])?.filter(ct => String(ct.commune?._id || ct.commune?.id || ct.commune) === cId).length || 0,
+        desks: ((desksQ.data as any[]) || [])?.filter(d => {
+          const center = d.center;
+          if (typeof center === "object") {
+            return String(center.commune?._id || center.commune?.id || center.commune) === cId;
+          }
+          return false;
+        }).length || 0,
+        _id: cId,
+      };
+    });
+  }, [communesQ.data, centersQ.data, desksQ.data]);
 
   // Centers
   const centersData = React.useMemo(() => {
     if (!centersQ.data) return [];
-    return (centersQ.data as ICenter[]).map((c) => ({
-      id: c.id || c._id,
-      name: c.name,
-      location: c.address || "",
-      male: c.male_registered || 0,
-      female: c.female_registered || 0,
-      total: c.total_registered || 0,
-      numbers_desks: c.numbers_desks || 0,
-      _id: c._id || c.id,
-    }));
+    return (centersQ.data as ICenter[]).map((c) => {
+      const cId = String(c.id || c._id);
+      return {
+        id: cId,
+        name: c.name,
+        location: c.location || c.address || "",
+        male: c.male_count || 0,
+        female: c.female_count || 0,
+        total: c.total_voters || 0,
+        numbers_desks: c.number_of_desks || 0,
+        wilaya_id: c.wilaya ? String(typeof c.wilaya === "object" ? ((c.wilaya as any).id || (c.wilaya as any)._id) : c.wilaya) : "",
+        commune_id: c.commune ? String(typeof c.commune === "object" ? ((c.commune as any).id || (c.commune as any)._id) : c.commune) : "",
+        _id: cId,
+      };
+    });
   }, [centersQ.data]);
 
   // Desks
   const desksData = React.useMemo(() => {
     if (!desksQ.data) return [];
     return (desksQ.data as IDesk[]).map((d) => ({
-      id: d.id || d._id,
+      id: String(d.id || d._id),
       num_desk: String(d.desk_number).padStart(2, "0"),
       center: typeof d.center === "object" ? (d.center as ICenter).name : d.center,
-      male: d.male_registered || 0,
-      female: d.female_registered || 0,
-      total: d.total_registered || 0,
-      _id: d._id || d.id,
+      male: d.male_count || 0,
+      female: d.female_count || 0,
+      total: d.total_voters || 0,
+      _id: String(d._id || d.id),
     }));
   }, [desksQ.data]);
 
@@ -199,13 +222,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const partiesData = React.useMemo(() => {
     if (!partiesQ.data) return [];
     return (partiesQ.data as IParty[]).map((p) => ({
-      id: p.id || p._id,
+      id: String(p.id || p._id),
       name: p.name,
       short: p.acronym,
       leader: p.leader,
-      wilaya_siege: p.wilaya_siege || "",
+      wilaya_siege: typeof p.wilaya === "object" ? ((p.wilaya as any).name_ar || (p.wilaya as any).name_fr || (p.wilaya as any).name) : p.wilaya,
       founded: p.founded || "",
-      _id: p._id || p.id,
+      _id: String(p._id || p.id),
     }));
   }, [partiesQ.data]);
 
@@ -213,25 +236,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const candidatesData = React.useMemo(() => {
     if (!candidatsQ.data) return [];
     return (candidatsQ.data as ICandidat[]).map((c) => ({
-      id: c.id || c._id,
+      id: String(c.id || c._id),
       full_name: c.full_name,
       nin: c.nin,
       phone: c.phone,
       birthday: c.date_of_birth,
       party: typeof c.party === "object" ? (c.party as IParty).acronym : c.party,
-      party_id: typeof c.party === "object" ? (c.party as IParty)._id : c.party,
+      party_id: c.party ? String(typeof c.party === "object" ? ((c.party as IParty)._id || (c.party as IParty).id) : c.party) : "",
       wilaya: typeof c.wilaya === "object" ? ((c.wilaya as IWilaya).name_ar || (c.wilaya as IWilaya).name_fr) : c.wilaya,
-      wilaya_id: typeof c.wilaya === "object" ? (c.wilaya as IWilaya)._id : c.wilaya,
+      wilaya_id: c.wilaya ? String(typeof c.wilaya === "object" ? (c.wilaya as IWilaya)._id : c.wilaya) : "",
       fav: c.is_favorite,
       result: c.result || 0,
-      _id: c._id || c.id,
+      _id: String(c._id || c.id),
     }));
   }, [candidatsQ.data]);
 
   // Admins: merge admin_wilaya + admin_commun into flat list
   const adminsData = React.useMemo(() => {
     const wilayas = ((adminWilayaQ.data || []) as IAdminWilaya[]).map((a) => ({
-      id: a.id || a._id,
+      id: String(a.id || a._id),
       name: a.full_name,
       email: a.email,
       nin: a.nin,
@@ -240,11 +263,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       wilaya: typeof a.wilaya === "object" ? ((a.wilaya as IWilaya).name_ar || (a.wilaya as IWilaya).name_fr) : a.wilaya,
       status: a.status === "active" ? "Actif" : "Inactif",
       _type: "admin_wilaya" as const,
-      _id: a._id || a.id,
-      wilaya_id: typeof a.wilaya === "object" ? (a.wilaya as any)._id : a.wilaya,
+      _id: String(a._id || a.id),
+      wilaya_id: a.wilaya ? String(typeof a.wilaya === "object" ? (a.wilaya as any)._id : a.wilaya) : "",
     }));
     const communs = ((adminCommunQ.data || []) as IAdminCommun[]).map((a) => ({
-      id: a.id || a._id,
+      id: String(a.id || a._id),
       name: a.full_name,
       email: a.email,
       nin: a.nin,
@@ -253,9 +276,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       wilaya: typeof a.wilaya === "object" ? ((a.wilaya as IWilaya).name_ar || (a.wilaya as IWilaya).name_fr) : a.wilaya,
       status: a.status === "active" ? "Actif" : "Inactif",
       _type: "admin_commun" as const,
-      _id: a._id || a.id,
-      wilaya_id: typeof a.wilaya === "object" ? (a.wilaya as any)._id : a.wilaya,
-      commune_id: typeof a.commune === "object" ? (a.commune as any)._id : a.commune,
+      _id: String(a._id || a.id),
+      wilaya_id: a.wilaya ? String(typeof a.wilaya === "object" ? (a.wilaya as any)._id : a.wilaya) : "",
+      commune_id: a.commune ? String(typeof a.commune === "object" ? (a.commune as any)._id : a.commune) : "",
     }));
     return [...wilayas, ...communs];
   }, [adminWilayaQ.data, adminCommunQ.data]);
@@ -264,18 +287,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const membersData = React.useMemo(() => {
     if (!membersQ.data) return [];
     return (membersQ.data as IMemberActif[]).map((m) => ({
-      id: m.id || m._id,
+      id: String(m.id || m._id),
       name: m.full_name,
       email: m.email,
       nin: m.nin,
       phone: m.phone,
       birthday: m.date_of_birth,
       party: typeof m.party === "object" ? (m.party as IParty).name : m.party,
+      party_id: m.party ? String(typeof m.party === "object" ? ((m.party as any).id || (m.party as any)._id) : m.party) : "",
       goal: m.goal || "",
       location: typeof m.wilaya === "object" ? ((m.wilaya as IWilaya).name_ar || (m.wilaya as IWilaya).name_fr) : m.wilaya,
+      wilaya_id: m.wilaya ? String(typeof m.wilaya === "object" ? ((m.wilaya as any).id || (m.wilaya as any)._id) : m.wilaya) : "",
+      commune_id: m.commune ? String(typeof m.commune === "object" ? ((m.commune as any).id || (m.commune as any)._id) : m.commune) : "",
       admin_commun: m.created_by || "N/A",
       status: "Permanent",
-      _id: m._id || m.id,
+      _id: String(m._id || m.id),
     }));
   }, [membersQ.data]);
 

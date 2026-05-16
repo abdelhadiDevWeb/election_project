@@ -10,30 +10,30 @@ const adminBase = {
 };
 
 export const createSuperAdminSchema = Joi.object({
-  body: Joi.object({ ...adminBase, full_name: adminBase.full_name.required(), email: email.required(), password: password.required(), phone: phone.required(), nin: nin.required() }).required(),
+  body: Joi.object({ ...adminBase, full_name: adminBase.full_name.required(), email: email.required(), password: password.required(), phone: phone.required(), nin: nin.required() }).unknown(true).required(),
 }).unknown(true);
 
 export const updateSuperAdminSchema = Joi.object({
   params: Joi.object({ id: objectId.required() }).required(),
-  body: Joi.object({ ...adminBase, password: password.optional() }).min(1).required(),
+  body: Joi.object({ ...adminBase, password: password.optional() }).unknown(true).min(1).required(),
 }).unknown(true);
 
 export const createAdminWilayaSchema = Joi.object({
-  body: Joi.object({ ...adminBase, full_name: adminBase.full_name.required(), email: email.required(), password: password.required(), phone: phone.required(), nin: nin.required(), wilaya: objectId.required() }).required(),
+  body: Joi.object({ ...adminBase, full_name: adminBase.full_name.required(), email: email.required(), password: password.required(), phone: phone.required(), nin: nin.required(), wilaya: objectId.required() }).unknown(true).required(),
 }).unknown(true);
 
 export const updateAdminWilayaSchema = Joi.object({
   params: Joi.object({ id: objectId.required() }).required(),
-  body: Joi.object({ ...adminBase, password: password.optional(), wilaya: objectId.optional() }).min(1).required(),
+  body: Joi.object({ ...adminBase, password: password.optional(), wilaya: objectId.optional() }).unknown(true).min(1).required(),
 }).unknown(true);
 
 export const createAdminCommunSchema = Joi.object({
-  body: Joi.object({ ...adminBase, full_name: adminBase.full_name.required(), email: email.required(), password: password.required(), phone: phone.required(), nin: nin.required(), wilaya: objectId.required(), commune: objectId.required() }).required(),
+  body: Joi.object({ ...adminBase, full_name: adminBase.full_name.required(), email: email.required(), password: password.required(), phone: phone.required(), nin: nin.required(), wilaya: objectId.required(), commune: objectId.required() }).unknown(true).required(),
 }).unknown(true);
 
 export const updateAdminCommunSchema = Joi.object({
   params: Joi.object({ id: objectId.required() }).required(),
-  body: Joi.object({ ...adminBase, password: password.optional(), wilaya: objectId.optional(), commune: objectId.optional() }).min(1).required(),
+  body: Joi.object({ ...adminBase, password: password.optional(), wilaya: objectId.optional(), commune: objectId.optional() }).unknown(true).min(1).required(),
 }).unknown(true);
 
 export const listAdminSchema = Joi.object({

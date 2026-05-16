@@ -66,10 +66,16 @@ apiRouter.get("/auth/me", requireAuth, authCtrl.meHandler);
 apiRouter.get("/wilayas", validate(wilayaVal.listSchema), wilayaCtrl.list);
 apiRouter.get("/wilayas/:id", validate(wilayaVal.getByIdSchema), wilayaCtrl.getById);
 apiRouter.get("/wilayas/:id/communes", validate(wilayaVal.getByIdSchema), wilayaCtrl.getCommunes);
+apiRouter.post("/wilayas", requireAuth, requireRoles("super_admin"), writeLimiter, validate(wilayaVal.createSchema), wilayaCtrl.create);
+apiRouter.put("/wilayas/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(wilayaVal.updateSchema), wilayaCtrl.update);
+apiRouter.delete("/wilayas/:id", requireAuth, requireRoles("super_admin"), writeLimiter, wilayaCtrl.remove);
 
 // ────────────────────────── Communes (public) ───────────────
 apiRouter.get("/communes", validate(communeVal.listSchema), communeCtrl.list);
 apiRouter.get("/communes/:id", validate(communeVal.getByIdSchema), communeCtrl.getById);
+apiRouter.post("/communes", requireAuth, requireRoles("super_admin"), writeLimiter, validate(communeVal.createSchema), communeCtrl.create);
+apiRouter.put("/communes/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(communeVal.updateSchema), communeCtrl.update);
+apiRouter.delete("/communes/:id", requireAuth, requireRoles("super_admin"), writeLimiter, communeCtrl.remove);
 
 // ────────────────────────── Super Admins ────────────────────
 apiRouter.get("/super-admins", requireAuth, requireRoles("super_admin"), validate(superAdminVal.listSchema), superAdminCtrl.list);

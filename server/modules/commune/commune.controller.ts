@@ -1,18 +1,22 @@
-import type { RequestHandler } from "express";
-import * as communeService from "./commune.service";
+import { Commune } from "./commune.model";
+import { makeListHandler, makeGetHandler, makeCreateHandler, makeUpdateHandler, makeDeleteHandler } from "../common/crud.controller";
 
-export const list: RequestHandler = async (req, res, next) => {
-  try {
-    const result = await communeService.findAllPaginated(req.query);
-    res.json({ ok: true, ...result });
-  } catch (err) { next(err); }
-};
-
-export const getById: RequestHandler = async (req, res, next) => {
-  try {
-    const data = await communeService.findById(req.params.id as string);
-    res.json({ ok: true, data });
-  } catch (err: any) {
-    res.status(err.status || 500).json({ ok: false, message: err.message });
+export const list = makeListHandler(Commune, (q) => {
+  const filter: any = {};
+  if (q.wilaya) filter.wilaya = q.wilaya;
+  if (q.search) {
+    filter.$or = [
+      { name_fr: { $regex: q.search, $options: "i" } },
+      { name_ar: { $regex: q.search, $options: "i" } },
+    ];
   }
-};
+  return filter;
+});
+
+export const getById = makeGetHandler(Commune);
+
+export const create = makeCreateHandler(Commune);
+
+export const update = makeUpdateHandler(Commune);
+
+export const remove = makeDeleteHandler(Commune);

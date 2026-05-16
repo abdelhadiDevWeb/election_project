@@ -21,7 +21,7 @@ const candidatSchema = new Schema<ICandidat>(
     date_of_birth: { type: Date, required: true },
     image: { type: Buffer, select: false },
     image_mimetype: { type: String, select: false },
-    party: { type: Schema.Types.ObjectId, ref: "Party", required: true },
+    party: { type: Schema.Types.ObjectId, ref: "Party" },
     wilaya: { type: Schema.Types.ObjectId, ref: "Wilaya", required: true },
     is_favorite: { type: Boolean, default: false },
     result: { type: Number, default: 0, min: 0 },

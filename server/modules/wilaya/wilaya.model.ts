@@ -11,7 +11,7 @@ const wilayaSchema = new Schema<IWilaya>(
   {
     name_fr: { type: String, required: true, trim: true },
     name_ar: { type: String, required: true, trim: true },
-    wilaya_code: { type: Number, required: true, unique: true, min: 1, max: 58 },
+    wilaya_code: { type: Number, required: true, unique: true, min: 1 },
     seats_count: { type: Number, default: 0 },
   },
   {

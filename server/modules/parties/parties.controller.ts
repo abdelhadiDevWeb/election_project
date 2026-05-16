@@ -6,7 +6,7 @@ export const list = makeListHandler(Party, (q) => {
   if (q.wilaya) f.wilaya = q.wilaya;
   if (q.search) f.name = { $regex: q.search, $options: "i" };
   return f;
-}, "name wilaya createdAt", "wilaya");
+}, "name acronym leader founded wilaya createdAt", "wilaya");
 
 export const getById = makeGetHandler(Party, "wilaya");
 export const create = makeCreateHandler(Party, async (body, req) => { body.created_by = req.user?.sub; return body; });

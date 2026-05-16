@@ -117,11 +117,20 @@ export default function EntitesPolitiques() {
     e.preventDefault();
     try {
       if (activeTab === "parties") {
+        const selectedWilaya = wilayasData.find(w => 
+          w.name === formData.wilaya || w.name_fr === formData.wilaya || w.name_ar === formData.wilaya
+        );
+
+        if (!formData.name || !formData.short || !formData.leader || !selectedWilaya) {
+          alert("Please fill all required fields (Name, Acronym, Leader, and Wilaya)");
+          return;
+        }
+
         const body = {
           name: formData.name,
           acronym: formData.short,
           leader: formData.leader,
-          wilaya_siege: formData.wilaya,
+          wilaya: selectedWilaya._id || selectedWilaya.id,
           founded: formData.founded,
         };
         if (editingItem) {
@@ -132,10 +141,16 @@ export default function EntitesPolitiques() {
         }
         setPartiesData([]); // trigger refetch
       } else {
-        // Find wilaya ID from name for the API
+        // Find wilaya and party IDs from names for the API
         const selectedWilaya = wilayasData.find(w => 
           w.name === formData.wilaya || w.name_fr === formData.wilaya || w.name_ar === formData.wilaya
         );
+        const selectedParty = partiesData.find(p => p.short === formData.short);
+
+        if (!formData.name || !formData.nin || !selectedWilaya) {
+          alert("Please fill all required fields (Name, NIN, and Wilaya)");
+          return;
+        }
         
         // Use FormData for candidate (to include image)
         const fData = new FormData();
@@ -143,8 +158,15 @@ export default function EntitesPolitiques() {
         fData.append("nin", formData.nin);
         fData.append("phone", formData.phone);
         fData.append("date_of_birth", formData.birthday);
-        if (editingItem?.party_id) fData.append("party", editingItem.party_id);
-        if (selectedWilaya?._id) fData.append("wilaya", selectedWilaya._id);
+        
+        if (selectedParty?._id || selectedParty?.id) {
+          fData.append("party", selectedParty._id || selectedParty.id);
+        }
+        
+        if (selectedWilaya?._id || selectedWilaya?.id) {
+          fData.append("wilaya", selectedWilaya._id || selectedWilaya.id);
+        }
+        
         fData.append("is_favorite", String(formData.fav));
         
         if (formData.imageFile) {

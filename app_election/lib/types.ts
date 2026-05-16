@@ -93,10 +93,11 @@ export interface ICenter {
   address?: string;
   wilaya: string | IWilaya;
   commune: string | ICommune;
-  numbers_desks: number;
-  male_registered: number;
-  female_registered: number;
-  total_registered: number;
+  number_of_desks: number;
+  male_count: number;
+  female_count: number;
+  total_voters: number;
+  location?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -106,9 +107,9 @@ export interface IDesk {
   _id: string;
   desk_number: number;
   center: string | ICenter;
-  male_registered: number;
-  female_registered: number;
-  total_registered: number;
+  male_count: number;
+  female_count: number;
+  total_voters: number;
   createdAt?: string;
   updatedAt?: string;
 }

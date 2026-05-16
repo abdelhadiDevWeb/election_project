@@ -39,6 +39,7 @@ export default function RolesElection() {
     name: "",
     email: "",
     password: "",
+    birthday: "",
     role: "obs_center",
     center: "",
     desk: "",
@@ -63,8 +64,9 @@ export default function RolesElection() {
         name: item.name,
         email: item.email || "",
         password: "",
+        birthday: item.birthday || "",
         role: item.role === "Observateur Centre" ? "obs_center" : "obs_desk",
-        center: item.center || "",
+        center: item.center_id || "",
         desk: item.desk || "",
         time: item.expires || "",
         date: "",
@@ -72,7 +74,7 @@ export default function RolesElection() {
         phone: item.phone || ""
       });
     } else {
-      setNewUser({ name: "", email: "", password: "", role: "obs_center", center: "", desk: "", time: "", date: "", nin: "", phone: "" });
+      setNewUser({ name: "", email: "", password: "", birthday: "", role: "obs_center", center: "", desk: "", time: "", date: "", nin: "", phone: "" });
     }
     setIsModalOpen(true);
   };
@@ -93,34 +95,48 @@ export default function RolesElection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const selectedCenter = centersData.find(c => c.id === newUser.center || c._id === newUser.center);
+      
       const roleMap: Record<string, string> = {
         obs_center: "observateur_centre",
         obs_desk: "observateur_bureau",
         chef_centre: "chef_centre",
         scrutateur: "scrutateur",
       };
+
+      if (!newUser.email || !newUser.name || !newUser.nin || !newUser.birthday || !selectedCenter) {
+        alert("Please fill all required fields (Name, Email, NIN, Birthday, and Center)");
+        return;
+      }
+
       const body: any = {
         full_name: newUser.name,
         email: newUser.email,
         phone: newUser.phone,
         nin: newUser.nin,
+        password: newUser.password,
+        date_of_birth: newUser.birthday,
         role: roleMap[newUser.role] || "observateur_centre",
+        center: selectedCenter.id || selectedCenter._id,
+        wilaya: selectedCenter.wilaya_id,
+        commune: selectedCenter.commune_id,
         assigned_time: newUser.time || "20:00",
-        assigned_date: newUser.date || undefined,
+        assigned_date: newUser.date || new Date().toISOString().split('T')[0],
       };
-      if (newUser.password) body.password = newUser.password;
 
       if (editingItem) {
         const apiId = editingItem._id || editingItem.id;
         await mutation.mutate("PUT", `/roles-election-day/${apiId}`, body);
       } else {
-        if (!newUser.password) { alert("Password is required"); return; }
+        if (!newUser.password) { alert("Password is required. Use the lightning icon to generate one."); return; }
         await mutation.mutate("POST", "/roles-election-day", body);
       }
       setObserversData([]);
       setIsModalOpen(false);
     } catch (err: any) {
-      alert(err?.message || "Operation failed");
+      const details = err.response?.details;
+      const detailStr = Array.isArray(details) ? "\n" + details.join("\n") : "";
+      alert((err?.message || "Operation failed") + detailStr);
     }
   };
 
@@ -197,6 +213,33 @@ export default function RolesElection() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'البريد الإلكتروني' : 'Email'}</label>
+                <input required type="email" placeholder="email@exemple.dz" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'كلمة المرور' : 'Mot de Passe'}</label>
+                <div className="relative">
+                  <input required={!editingItem} type="text" placeholder="••••••••" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold pr-12" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} />
+                  <button type="button" onClick={() => setNewUser({...newUser, password: generateCode()})} className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 transition-all">
+                    <Zap size={14} className="text-amber-500" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'تاريخ الميلاد' : 'Date de Naissance'}</label>
+                <input required type="date" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.birthday || ""} onChange={(e) => setNewUser({...newUser, birthday: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الرقم التعريفي الوطني (NIN)' : 'Identifiant National (NIN)'}</label>
+                <input required type="text" maxLength={18} pattern="[0-9]*" inputMode="numeric" placeholder={language === 'ar' ? '18 رقم' : '18 chiffres'} className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.nin} onChange={(e) => setNewUser({...newUser, nin: e.target.value.replace(/\D/g, "")})} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الدور العملياتي' : 'Rôle Opérationnel'}</label>
                 <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
                   <option value="obs_center">{language === 'ar' ? 'مراقب مركز' : 'Observateur Centre'}</option>
@@ -205,32 +248,21 @@ export default function RolesElection() {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'تعيين المركز' : 'Affectation Centre'}</label>
-                <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.center} onChange={(e) => setNewUser({...newUser, center: e.target.value})}>
+                <select required className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.center} onChange={(e) => setNewUser({...newUser, center: e.target.value})}>
                   <option value="">{language === 'ar' ? 'اختيار...' : 'Sélectionner...'}</option>
-                  {centersData.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {centersData.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الرقم التعريفي الوطني (NIN)' : 'Identifiant National (NIN)'}</label>
-                <input required type="text" maxLength={18} pattern="[0-9]*" inputMode="numeric" placeholder={language === 'ar' ? '18 رقم' : '18 chiffres'} className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.nin} onChange={(e) => setNewUser({...newUser, nin: e.target.value.replace(/\D/g, "")})} />
-              </div>
-              <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'جهة اتصال طارئة' : 'Contact Urgent'}</label>
                 <input required type="text" placeholder="05XX XX XX XX" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.phone} onChange={(e) => setNewUser({...newUser, phone: e.target.value})} />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'انتهاء صلاحية الجلسة' : 'Expiration de Session'}</label>
                 <input type="time" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.time} onChange={(e) => setNewUser({...newUser, time: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'التاريخ الفعلي' : 'Date Effective'}</label>
-                <input type="date" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={newUser.date} onChange={(e) => setNewUser({...newUser, date: e.target.value})} />
               </div>
             </div>
           </div>

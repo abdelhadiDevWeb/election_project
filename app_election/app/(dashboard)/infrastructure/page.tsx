@@ -44,8 +44,9 @@ export default function InfrastructureSetup() {
     name: "",
     num: "",
     seats: "",
-    wilaya: "Alger",
-    center: "Centre Pasteur",
+    wilayaId: "",
+    communeId: "",
+    centerId: "",
     location: "",
     male: 0,
     female: 0,
@@ -141,16 +142,29 @@ export default function InfrastructureSetup() {
         name: item.name || item.num_desk || "",
         num: item.num_wilaya || item.num_bladia || item.num_desk || "",
         seats: item.seats_count?.toString() || "",
-        wilaya: item.wilaya || "Alger",
-        center: item.center || "Centre Pasteur",
-        location: item.location || "",
-        male: item.male || 0,
-        female: item.female || 0,
-        total: item.total || 0,
-        desksCount: item.numbers_desks || 0
+        wilayaId: item.wilaya?._id || item.wilaya?.id || item.wilaya || "",
+        communeId: item.commune?._id || item.commune?.id || item.commune || "",
+        centerId: item.center?._id || item.center?.id || item.center || "",
+        location: item.location || item.address || "",
+        male: item.male_count || item.male || 0,
+        female: item.female_count || item.female || 0,
+        total: item.total_voters || item.total || 0,
+        desksCount: item.number_of_desks || item.numbers_desks || 0
       });
     } else {
-      setFormData({ ...formData, name: "", num: "", seats: "", location: "", male: 0, female: 0, total: 0, desksCount: 0 });
+      setFormData({ 
+        name: "", 
+        num: "", 
+        seats: "", 
+        wilayaId: "", 
+        communeId: "", 
+        centerId: "", 
+        location: "", 
+        male: 0, 
+        female: 0, 
+        total: 0, 
+        desksCount: 0 
+      });
     }
     setIsModalOpen(true);
   };
@@ -179,23 +193,32 @@ export default function InfrastructureSetup() {
     e.preventDefault();
     try {
       if (modalType === "wilaya") {
+        if (!formData.name || !formData.num) {
+          alert("Please fill all required fields (Name and Number)");
+          return;
+        }
         const body = {
-          name_fr: formData.name,
+          name_fr: formData.name, // Fallback to same name for both if not separated
           name_ar: formData.name,
-          wilaya_code: parseInt(formData.num) || 0,
+          wilaya_code: parseInt(formData.num),
           seats_count: parseInt(formData.seats) || 0,
         };
         if (editingItem) {
           await mutation.mutate("PUT", `/wilayas/${editingItem._id || editingItem.id}`, body);
+        } else {
+          await mutation.mutate("POST", "/wilayas", body);
         }
         setWilayasData([]);
       } else if (modalType === "commune") {
-        const selectedWilaya = wilayasData.find(w => w.name === formData.wilaya || w.name_fr === formData.wilaya);
+        if (!formData.name || !formData.num || !formData.wilayaId) {
+          alert("Please fill all required fields (Name, Number, and Wilaya)");
+          return;
+        }
         const body = {
           name_fr: formData.name,
           name_ar: formData.name,
-          commune_id: parseInt(formData.num) || 0,
-          wilaya: selectedWilaya?._id,
+          commune_id: parseInt(formData.num),
+          wilaya: formData.wilayaId,
         };
         if (editingItem) {
           await mutation.mutate("PUT", `/communes/${editingItem._id || editingItem.id}`, body);
@@ -204,13 +227,19 @@ export default function InfrastructureSetup() {
         }
         setCommunesData([]);
       } else if (modalType === "center") {
+        if (!formData.name || !formData.wilayaId || !formData.communeId) {
+          alert("Please fill all required fields (Name, Wilaya, and Commune)");
+          return;
+        }
         const body = {
           name: formData.name,
-          address: formData.location,
-          male_registered: formData.male,
-          female_registered: formData.female,
-          total_registered: formData.male + formData.female,
-          numbers_desks: formData.desksCount,
+          wilaya: formData.wilayaId,
+          commune: formData.communeId,
+          male_count: parseInt(formData.male as any) || 0,
+          female_count: parseInt(formData.female as any) || 0,
+          total_voters: (parseInt(formData.male as any) || 0) + (parseInt(formData.female as any) || 0),
+          number_of_desks: parseInt(formData.num as any) || formData.desksCount || 0,
+          location: formData.location,
         };
         if (editingItem) {
           await mutation.mutate("PUT", `/centers/${editingItem._id || editingItem.id}`, body);
@@ -219,11 +248,16 @@ export default function InfrastructureSetup() {
         }
         setCentersData([]);
       } else if (modalType === "desk") {
+        if (!formData.num || !formData.centerId) {
+          alert("Please fill all required fields (Desk Number and Center)");
+          return;
+        }
         const body = {
           desk_number: parseInt(formData.num) || 0,
-          male_registered: formData.male,
-          female_registered: formData.female,
-          total_registered: formData.male + formData.female,
+          center: formData.centerId,
+          male_count: parseInt(formData.male as any) || 0,
+          female_count: parseInt(formData.female as any) || 0,
+          total_voters: (parseInt(formData.male as any) || 0) + (parseInt(formData.female as any) || 0),
         };
         if (editingItem) {
           await mutation.mutate("PUT", `/desks/${editingItem._id || editingItem.id}`, body);
@@ -358,9 +392,9 @@ export default function InfrastructureSetup() {
             <div className="space-y-5">
                <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الولاية التابعة لها' : "Wilaya d'Attachement"}</label>
-                <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold focus:ring-2 focus:ring-algerian-green/10" value={formData.wilaya} onChange={(e) => setFormData({...formData, wilaya: e.target.value})}>
+                <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold focus:ring-2 focus:ring-algerian-green/10" value={formData.wilayaId} onChange={(e) => setFormData({...formData, wilayaId: e.target.value})}>
                   <option value="">{language === 'ar' ? 'اختر الولاية...' : 'Choisir la wilaya...'}</option>
-                  {wilayasData.map(w => <option key={w.id} value={w.name}>{w.num_wilaya} - {w.name}</option>)}
+                  {wilayasData.map(w => <option key={w.id} value={w.id}>{w.num_wilaya} - {w.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -381,16 +415,16 @@ export default function InfrastructureSetup() {
                <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الولاية' : 'Wilaya'}</label>
-                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.wilaya} onChange={(e) => setFormData({...formData, wilaya: e.target.value})}>
+                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.wilayaId} onChange={(e) => setFormData({...formData, wilayaId: e.target.value, communeId: ""})}>
                     <option value="">{language === 'ar' ? 'اختر...' : 'Choisir...'}</option>
-                    {wilayasData.map(w => <option key={w.id} value={w.name}>{w.name}</option>)}
+                    {wilayasData.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'البلدية' : 'Commune'}</label>
-                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.location.split(', ')[1]} onChange={(e) => setFormData({...formData, location: `${formData.wilaya}, ${e.target.value}`})}>
+                  <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.communeId} onChange={(e) => setFormData({...formData, communeId: e.target.value})}>
                     <option value="">{language === 'ar' ? 'اختر...' : 'Choisir...'}</option>
-                    {communesData.filter(c => c.wilaya === formData.wilaya).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    {communesData.filter(c => String(c.wilaya_id || c.wilaya) === String(formData.wilayaId)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -429,9 +463,9 @@ export default function InfrastructureSetup() {
             <div className="space-y-5">
                <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'المركز الرئيسي' : 'Centre Parent'}</label>
-                <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.center} onChange={(e) => setFormData({...formData, center: e.target.value})}>
+                <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.centerId} onChange={(e) => setFormData({...formData, centerId: e.target.value})}>
                   <option value="">{language === 'ar' ? 'اختر مركزًا' : 'Sélectionner un Centre'}</option>
-                  {centersData.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {centersData.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
