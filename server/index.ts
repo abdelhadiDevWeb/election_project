@@ -18,9 +18,7 @@ import { httpLogger } from "./middleware/logger";
 import { globalLimiter } from "./middleware/rateLimiters";
 import { apiRouter } from "./routes";
 import { initSocket } from "./socket";
-// import session from "express-session";
-// import { SessionEntity } from "./entity/Session";
-// import { TypeormStore } from "connect-typeorm";
+import { deepSanitize } from "./middleware/sanitize";
 
 
 const app = express();
@@ -53,9 +51,7 @@ app.use(
     replaceWith: "_",
   })
 );
-
-
-
+app.use(deepSanitize);
 
 
 app.use(helmet());
