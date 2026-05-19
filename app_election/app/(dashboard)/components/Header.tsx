@@ -10,14 +10,16 @@ import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { useTheme } from "@/app/context/ThemeContext";
 
 interface HeaderProps {
   toggleSidebar?: () => void;
 }
 
 export default function Header({ toggleSidebar }: HeaderProps) {
-  const [isDark, setIsDark] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const pathname = usePathname();
   const router = useRouter();
   const { electionScope, setElectionScope } = useData();
@@ -26,20 +28,8 @@ export default function Header({ toggleSidebar }: HeaderProps) {
   const { data: notifications } = useNotifications({ read: false, limit: 10 });
   const unreadCount = Array.isArray(notifications) ? notifications.length : 0;
 
-  useEffect(() => {
-    if (document.documentElement.classList.contains("dark")) {
-      setIsDark(true);
-    }
-  }, []);
-
   const toggleTheme = () => {
-    if (isDark) {
-      document.documentElement.classList.remove("dark");
-      setIsDark(false);
-    } else {
-      document.documentElement.classList.add("dark");
-      setIsDark(true);
-    }
+    setTheme(isDark ? "light" : "dark");
   };
 
   const getPageTitle = () => {
@@ -50,6 +40,8 @@ export default function Header({ toggleSidebar }: HeaderProps) {
       case "/entites-politiques": return t("nav.entities");
       case "/validation": return t("nav.validation");
       case "/roles-election": return t("nav.roles");
+      case "/citoyens": return t("nav.citizens");
+      case "/mes-citoyens": return t("nav.myCitizens");
       default: return t("dash.title");
     }
   };

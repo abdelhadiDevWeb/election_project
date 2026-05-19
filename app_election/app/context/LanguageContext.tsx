@@ -20,6 +20,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.entities": "Entités Politiques",
     "nav.validation": "Saisie & Audit PV",
     "nav.roles": "Rôles & Missions",
+    "nav.citizens": "Citoyens",
+    "nav.myCitizens": "Mes Citoyens",
     "nav.settings": "Paramètres",
     "nav.logout": "Déconnexion",
 
@@ -110,6 +112,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.entities": "الكيانات السياسية",
     "nav.validation": "إدخال وتدقيق المحاضر",
     "nav.roles": "الأدوار والمهام",
+    "nav.citizens": "المواطنون",
+    "nav.myCitizens": "مواطني",
     "nav.settings": "الإعدادات",
     "nav.logout": "تسجيل الخروج",
 

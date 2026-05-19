@@ -26,7 +26,7 @@ const memberActifSchema = new Schema<IMemberActif>(
     wilaya: { type: Schema.Types.ObjectId, ref: "Wilaya", required: true },
     commune: { type: Schema.Types.ObjectId, ref: "Commune", required: true },
     party: { type: Schema.Types.ObjectId, ref: "Party" },
-    created_by: { type: Schema.Types.ObjectId, ref: "AdminCommun" },
+    created_by: { type: Schema.Types.ObjectId, ref: "Admin" },
   },
   {
     timestamps: true,

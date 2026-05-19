@@ -1,24 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Users, 
-  MapPin, 
-  Flag, 
-  CheckCircle, 
+import { usePathname, useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  MapPin,
+  Flag,
+  CheckCircle,
   Calendar,
-  ShieldCheck,
   Search,
   Settings,
-  HelpCircle,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { AlgeriaMapIcon } from "./AlgeriaMapIcon";
+import { useMemo, useState } from "react";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -27,31 +29,58 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, setIsOpen }: SidebarProps = {}) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t, dir, language } = useLanguage();
+  const { user, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const navigationGroups = [
-    {
-      title: language === 'ar' ? 'الرئيسية' : 'Principal',
-      items: [
-        { name: t("nav.overview"), href: "/", icon: LayoutDashboard },
-      ]
-    },
-    {
-      title: language === 'ar' ? 'الإدارة' : 'Administration',
-      items: [
-        { name: t("nav.access"), href: "/gestion-acces", icon: Users },
-        { name: t("nav.infrastructure"), href: "/infrastructure", icon: MapPin },
-      ]
-    },
-    {
-      title: language === 'ar' ? 'العمليات الانتخابية' : 'Opérations Électorales',
-      items: [
-        { name: t("nav.entities"), href: "/entites-politiques", icon: Flag },
-        { name: t("nav.validation"), href: "/validation", icon: CheckCircle },
-        { name: t("nav.roles"), href: "/roles-election", icon: Calendar },
-      ]
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setIsOpen?.(false);
+    try {
+      await logout();
+      router.push("/login");
+    } finally {
+      setIsLoggingOut(false);
     }
-  ];
+  };
+
+  const navigationGroups = useMemo(() => {
+    if (user?.role === "member_actif") {
+      return [
+        {
+          title: language === "ar" ? "الرئيسية" : "Principal",
+          items: [
+            { name: t("nav.overview"), href: "/", icon: LayoutDashboard },
+            { name: language === "ar" ? "مواطني" : "Mes Citoyens", href: "/mes-citoyens", icon: UsersRound },
+          ],
+        },
+      ];
+    }
+    return [
+      {
+        title: language === "ar" ? "الرئيسية" : "Principal",
+        items: [{ name: t("nav.overview"), href: "/", icon: LayoutDashboard }],
+      },
+      {
+        title: language === "ar" ? "الإدارة" : "Administration",
+        items: [
+          { name: t("nav.access"), href: "/gestion-acces", icon: Users },
+          { name: t("nav.infrastructure"), href: "/infrastructure", icon: MapPin },
+          { name: t("nav.citizens"), href: "/citoyens", icon: UsersRound },
+        ],
+      },
+      {
+        title: language === "ar" ? "العمليات الانتخابية" : "Opérations Électorales",
+        items: [
+          { name: t("nav.entities"), href: "/entites-politiques", icon: Flag },
+          { name: t("nav.validation"), href: "/validation", icon: CheckCircle },
+          { name: t("nav.roles"), href: "/roles-election", icon: Calendar },
+        ],
+      },
+    ];
+  }, [user?.role, language, t]);
 
   return (
     <>
@@ -169,16 +198,87 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps = {}) {
         ))}
       </nav>
 
-      {/* Footer Actions */}
-      <div className="mt-auto px-2 pt-6 border-t border-zinc-100 dark:border-white/5 space-y-1">
-        <Link href="/settings" onClick={() => setIsOpen?.(false)} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 transition-all">
-          <Settings size={18} />
+      {/* Footer */}
+      <div className="mt-auto space-y-2 border-t border-zinc-100 px-2 pt-6 dark:border-white/5">
+        <Link
+          href="/settings"
+          onClick={() => setIsOpen?.(false)}
+          className={cn(
+            "group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300",
+            pathname === "/settings"
+              ? "bg-white text-algerian-green shadow-sm dark:bg-white/10 dark:text-white"
+              : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/5 dark:hover:text-white"
+          )}
+        >
+          <motion.div whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }}>
+            <Settings
+              size={18}
+              className={cn(
+                "transition-colors",
+                pathname === "/settings"
+                  ? "text-algerian-green"
+                  : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
+              )}
+            />
+          </motion.div>
           <span>{t("nav.settings")}</span>
         </Link>
-        <Link href="/help" onClick={() => setIsOpen?.(false)} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 transition-all">
-          <HelpCircle size={18} />
-          <span>{language === 'ar' ? 'المساعدة والدعم' : 'Aide & Support'}</span>
-        </Link>
+
+        <motion.button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={cn(
+            "group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 text-sm font-black uppercase tracking-widest transition-colors duration-300",
+            "border-red-500/20 bg-gradient-to-r from-red-500/5 via-transparent to-red-500/10",
+            "text-red-600 hover:border-red-500/40 hover:from-red-500/10 hover:to-red-500/20",
+            "dark:text-red-400 dark:hover:border-red-500/30",
+            isLoggingOut && "pointer-events-none opacity-70"
+          )}
+        >
+          <span
+            className={cn(
+              "absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100",
+              "bg-[radial-gradient(circle_at_20%_50%,rgba(239,68,68,0.12),transparent_55%)]"
+            )}
+          />
+          <motion.span
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 ring-1 ring-red-500/20 group-hover:bg-red-500/20 group-hover:ring-red-500/35"
+            animate={isLoggingOut ? { x: [0, 4, 0], opacity: [1, 0.6, 1] } : {}}
+            whileHover={
+              isLoggingOut
+                ? undefined
+                : {
+                    x: dir === "rtl" ? [0, -3, 0] : [0, 3, 0],
+                    transition: { duration: 0.45, ease: "easeInOut" },
+                  }
+            }
+            transition={
+              isLoggingOut ? { duration: 0.8, repeat: Infinity, ease: "easeInOut" } : undefined
+            }
+          >
+            <motion.span
+              animate={isLoggingOut ? { rotate: 360 } : { rotate: 0 }}
+              transition={
+                isLoggingOut
+                  ? { duration: 1, repeat: Infinity, ease: "linear" }
+                  : { type: "spring", stiffness: 300, damping: 20 }
+              }
+              whileHover={isLoggingOut ? undefined : { rotate: dir === "rtl" ? -12 : 12 }}
+            >
+              <LogOut size={18} strokeWidth={2.5} className="text-red-500 dark:text-red-400" />
+            </motion.span>
+          </motion.span>
+          <span className="relative flex-1 text-start">
+            {isLoggingOut
+              ? language === "ar"
+                ? "جاري الخروج..."
+                : "Déconnexion..."
+              : t("nav.logout")}
+          </span>
+        </motion.button>
       </div>
     </div>
     </>

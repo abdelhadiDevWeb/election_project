@@ -40,7 +40,7 @@ const roleElectionDaySchema = new Schema<IRoleElectionDay>(
     location: { type: String, trim: true, maxlength: 500 },
     assigned_time: { type: String, trim: true },
     assigned_date: { type: Date },
-    created_by: { type: Schema.Types.ObjectId, ref: "AdminWilaya" },
+    created_by: { type: Schema.Types.ObjectId, ref: "Admin" },
   },
   {
     timestamps: true,

@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { env } from "../config/env";
 import { Wilaya } from "../modules/wilaya/wilaya.model";
 import { Commune } from "../modules/commune/commune.model";
-import { SuperAdmin } from "../modules/super-admin/super-admin.model";
+import { Admin } from "../modules/admin/admin.model";
 
 // ────────────────────────────────────────────────────────────────
 // Idempotent seed script — safe to run multiple times.
@@ -54,24 +54,25 @@ async function seed() {
 
   console.log(`Seeded ${wilayaCount} wilayas and ${communeCount} communes.`);
 
-  // ── 2. Default Super Admin ───────────────────────────────
+  // ── 2. Default super_admin (Admin collection) ─────────────
   const DEFAULT_EMAIL = "admin@anie.dz";
   const DEFAULT_PASSWORD = "Admin123!";
 
-  const exists = await SuperAdmin.findOne({ email: DEFAULT_EMAIL });
+  const exists = await Admin.findOne({ email: DEFAULT_EMAIL });
   if (!exists) {
     const hashed = await bcrypt.hash(DEFAULT_PASSWORD, 12);
-    await SuperAdmin.create({
+    await Admin.create({
       full_name: "Super Admin ANIE",
       email: DEFAULT_EMAIL,
       password: hashed,
+      role: "super_admin",
       status: "active",
       phone: "0550000000",
       nin: "000000000000000001",
     });
-    console.log(`Default super admin created: ${DEFAULT_EMAIL} / ${DEFAULT_PASSWORD}`);
+    console.log(`Default admin created: ${DEFAULT_EMAIL} / ${DEFAULT_PASSWORD}`);
   } else {
-    console.log("Default super admin already exists, skipping.");
+    console.log("Default admin already exists, skipping.");
   }
 
   await mongoose.disconnect();

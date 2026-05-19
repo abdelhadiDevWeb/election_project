@@ -7,7 +7,12 @@ import { uploadImage, uploadMessageFiles } from "../middleware/upload";
 
 // ── Auth ──
 import * as authCtrl from "../modules/auth/auth.controller";
-import { loginSchema } from "../modules/auth/auth.validator";
+import {
+  loginSchema,
+  registerSuperAdminSchema,
+  updateProfileSchema,
+  changePasswordSchema,
+} from "../modules/auth/auth.validator";
 
 // ── Wilaya & Commune ──
 import * as wilayaCtrl from "../modules/wilaya/wilaya.controller";
@@ -16,12 +21,8 @@ import * as communeCtrl from "../modules/commune/commune.controller";
 import * as communeVal from "../modules/commune/commune.validator";
 
 // ── Admins ──
-import * as superAdminCtrl from "../modules/super-admin/super-admin.controller";
-import * as superAdminVal from "../modules/super-admin/super-admin.validator";
-import * as adminWilayaCtrl from "../modules/admin-wilaya/admin-wilaya.controller";
-import * as adminWilayaVal from "../modules/admin-wilaya/admin-wilaya.validator";
-import * as adminCommunCtrl from "../modules/admin-commun/admin-commun.controller";
-import * as adminCommunVal from "../modules/admin-commun/admin-commun.validator";
+import * as adminCtrl from "../modules/admin/admin.controller";
+import * as adminVal from "../modules/admin/admin.validator";
 
 // ── Entities ──
 import * as partiesCtrl from "../modules/parties/parties.controller";
@@ -57,10 +58,13 @@ export const apiRouter = Router();
 apiRouter.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ────────────────────────── Auth ────────────────────────────
+apiRouter.post("/auth/register", authLimiter, validate(registerSuperAdminSchema), authCtrl.registerHandler);
 apiRouter.post("/auth/login", authLimiter, validate(loginSchema), authCtrl.loginHandler);
 apiRouter.post("/auth/refresh", authLimiter, authCtrl.refreshHandler);
 apiRouter.post("/auth/logout", authCtrl.logoutHandler);
 apiRouter.get("/auth/me", requireAuth, authCtrl.meHandler);
+apiRouter.patch("/auth/me", requireAuth, writeLimiter, validate(updateProfileSchema), authCtrl.updateMeHandler);
+apiRouter.patch("/auth/password", requireAuth, authLimiter, validate(changePasswordSchema), authCtrl.changePasswordHandler);
 
 // ────────────────────────── Wilayas (public) ────────────────
 apiRouter.get("/wilayas", validate(wilayaVal.listSchema), wilayaCtrl.list);
@@ -73,30 +77,16 @@ apiRouter.delete("/wilayas/:id", requireAuth, requireRoles("super_admin"), write
 // ────────────────────────── Communes (public) ───────────────
 apiRouter.get("/communes", validate(communeVal.listSchema), communeCtrl.list);
 apiRouter.get("/communes/:id", validate(communeVal.getByIdSchema), communeCtrl.getById);
-apiRouter.post("/communes", requireAuth, requireRoles("super_admin"), writeLimiter, validate(communeVal.createSchema), communeCtrl.create);
-apiRouter.put("/communes/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(communeVal.updateSchema), communeCtrl.update);
-apiRouter.delete("/communes/:id", requireAuth, requireRoles("super_admin"), writeLimiter, communeCtrl.remove);
+apiRouter.post("/communes", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(communeVal.createSchema), scopeGuard(), communeCtrl.create);
+apiRouter.put("/communes/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(communeVal.updateSchema), scopeGuard(), communeCtrl.update);
+apiRouter.delete("/communes/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, communeCtrl.remove);
 
-// ────────────────────────── Super Admins ────────────────────
-apiRouter.get("/super-admins", requireAuth, requireRoles("super_admin"), validate(superAdminVal.listSchema), superAdminCtrl.list);
-apiRouter.get("/super-admins/:id", requireAuth, requireRoles("super_admin"), validate(superAdminVal.getByIdSchema), superAdminCtrl.getById);
-apiRouter.post("/super-admins", requireAuth, requireRoles("super_admin"), writeLimiter, validate(superAdminVal.createSchema), superAdminCtrl.create);
-apiRouter.put("/super-admins/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(superAdminVal.updateSchema), superAdminCtrl.update);
-apiRouter.delete("/super-admins/:id", requireAuth, requireRoles("super_admin"), writeLimiter, superAdminCtrl.remove);
-
-// ────────────────────────── Admin Wilaya ────────────────────
-apiRouter.get("/admin-wilayas", requireAuth, requireRoles("super_admin"), validate(adminWilayaVal.listSchema), adminWilayaCtrl.list);
-apiRouter.get("/admin-wilayas/:id", requireAuth, requireRoles("super_admin"), validate(adminWilayaVal.getByIdSchema), adminWilayaCtrl.getById);
-apiRouter.post("/admin-wilayas", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminWilayaVal.createSchema), adminWilayaCtrl.create);
-apiRouter.put("/admin-wilayas/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminWilayaVal.updateSchema), adminWilayaCtrl.update);
-apiRouter.delete("/admin-wilayas/:id", requireAuth, requireRoles("super_admin"), writeLimiter, adminWilayaCtrl.remove);
-
-// ────────────────────────── Admin Commun ────────────────────
-apiRouter.get("/admin-communs", requireAuth, requireRoles("super_admin"), validate(adminCommunVal.listSchema), adminCommunCtrl.list);
-apiRouter.get("/admin-communs/:id", requireAuth, requireRoles("super_admin"), validate(adminCommunVal.getByIdSchema), adminCommunCtrl.getById);
-apiRouter.post("/admin-communs", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminCommunVal.createSchema), adminCommunCtrl.create);
-apiRouter.put("/admin-communs/:id", requireAuth, requireRoles("super_admin"), writeLimiter, validate(adminCommunVal.updateSchema), adminCommunCtrl.update);
-apiRouter.delete("/admin-communs/:id", requireAuth, requireRoles("super_admin"), writeLimiter, adminCommunCtrl.remove);
+// ────────────────────────── Admins (unified) ────────────────────
+apiRouter.get("/admins", requireAuth, requireRoles("super_admin", "admin_wilaya"), validate(adminVal.listSchema), adminCtrl.list);
+apiRouter.get("/admins/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), validate(adminVal.getByIdSchema), adminCtrl.getById);
+apiRouter.post("/admins", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(adminVal.createSchema), adminCtrl.create);
+apiRouter.put("/admins/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(adminVal.updateSchema), adminCtrl.update);
+apiRouter.delete("/admins/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, adminCtrl.remove);
 
 // ────────────────────────── Parties ─────────────────────────
 apiRouter.get("/parties", requireAuth, validate(partiesVal.listSchema), scopeGuard(), partiesCtrl.list);
@@ -109,9 +99,9 @@ apiRouter.delete("/parties/:id", requireAuth, requireRoles("super_admin", "admin
 apiRouter.get("/candidats", requireAuth, validate(candidatsVal.listSchema), scopeGuard(), candidatsCtrl.list);
 apiRouter.get("/candidats/:id", requireAuth, validate(candidatsVal.getByIdSchema), candidatsCtrl.getById);
 apiRouter.get("/candidats/:id/portrait", candidatsCtrl.getPortrait);
-apiRouter.post("/candidats", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, uploadImage.single("image"), validate(candidatsVal.createSchema), scopeGuard(), candidatsCtrl.create);
-apiRouter.put("/candidats/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, uploadImage.single("image"), validate(candidatsVal.updateSchema), candidatsCtrl.update);
-apiRouter.delete("/candidats/:id", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, candidatsCtrl.remove);
+apiRouter.post("/candidats", requireAuth, requireRoles("super_admin", "admin_wilaya", "member_actif"), writeLimiter, uploadImage.single("image"), validate(candidatsVal.createSchema), scopeGuard(), candidatsCtrl.create);
+apiRouter.put("/candidats/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "member_actif"), writeLimiter, uploadImage.single("image"), validate(candidatsVal.updateSchema), candidatsCtrl.update);
+apiRouter.delete("/candidats/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "member_actif"), writeLimiter, candidatsCtrl.remove);
 
 // ────────────────────────── Members Actifs ──────────────────
 apiRouter.get("/members-actifs", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), validate(memberActifVal.listSchema), scopeGuard(), memberActifCtrl.list);
@@ -121,25 +111,31 @@ apiRouter.put("/members-actifs/:id", requireAuth, requireRoles("super_admin", "a
 apiRouter.delete("/members-actifs/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, memberActifCtrl.remove);
 
 // ────────────────────────── Citizens ────────────────────────
-apiRouter.get("/citizens", requireAuth, requireRoles("super_admin", "admin_commun", "member_actif"), validate(citizenVal.listSchema), citizenCtrl.list);
+apiRouter.get(
+  "/citizens",
+  requireAuth,
+  requireRoles("super_admin", "admin_wilaya", "admin_commun", "member_actif"),
+  validate(citizenVal.listSchema),
+  citizenCtrl.list
+);
 apiRouter.get("/citizens/:id", requireAuth, validate(citizenVal.getByIdSchema), citizenCtrl.getById);
 apiRouter.post("/citizens", requireAuth, requireRoles("super_admin", "admin_commun", "member_actif"), writeLimiter, validate(citizenVal.createSchema), citizenCtrl.create);
-apiRouter.put("/citizens/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(citizenVal.updateSchema), citizenCtrl.update);
+apiRouter.put("/citizens/:id", requireAuth, requireRoles("super_admin", "admin_commun", "member_actif"), writeLimiter, validate(citizenVal.updateSchema), citizenCtrl.update);
 apiRouter.delete("/citizens/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, citizenCtrl.remove);
 
 // ────────────────────────── Centers ─────────────────────────
 apiRouter.get("/centers", requireAuth, validate(centerVal.listSchema), scopeGuard(), centerCtrl.list);
 apiRouter.get("/centers/:id", requireAuth, validate(centerVal.getByIdSchema), centerCtrl.getById);
-apiRouter.post("/centers", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(centerVal.createSchema), scopeGuard(), centerCtrl.create);
-apiRouter.put("/centers/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(centerVal.updateSchema), centerCtrl.update);
-apiRouter.delete("/centers/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, centerCtrl.remove);
+apiRouter.post("/centers", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, validate(centerVal.createSchema), scopeGuard(), centerCtrl.create);
+apiRouter.put("/centers/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, validate(centerVal.updateSchema), scopeGuard(), centerCtrl.update);
+apiRouter.delete("/centers/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, scopeGuard(), centerCtrl.remove);
 
 // ────────────────────────── Desks ───────────────────────────
 apiRouter.get("/desks", requireAuth, validate(deskVal.listSchema), deskCtrl.list);
 apiRouter.get("/desks/:id", requireAuth, validate(deskVal.getByIdSchema), deskCtrl.getById);
-apiRouter.post("/desks", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(deskVal.createSchema), deskCtrl.create);
-apiRouter.put("/desks/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, validate(deskVal.updateSchema), deskCtrl.update);
-apiRouter.delete("/desks/:id", requireAuth, requireRoles("super_admin", "admin_commun"), writeLimiter, deskCtrl.remove);
+apiRouter.post("/desks", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, validate(deskVal.createSchema), deskCtrl.create);
+apiRouter.put("/desks/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, validate(deskVal.updateSchema), deskCtrl.update);
+apiRouter.delete("/desks/:id", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, deskCtrl.remove);
 
 // ────────────────────────── Roles Election Day ──────────────
 apiRouter.get("/roles-election-day", requireAuth, requireRoles("super_admin", "admin_wilaya"), validate(roleEdVal.listSchema), scopeGuard(), roleEdCtrl.list);

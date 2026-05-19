@@ -1,11 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
-import { SuperAdmin } from "../super-admin/super-admin.model";
-import { AdminWilaya } from "../admin-wilaya/admin-wilaya.model";
-import { AdminCommun } from "../admin-commun/admin-commun.model";
+import { Admin, type AdminRole } from "../admin/admin.model";
 import { MemberActif } from "../member-actif/member-actif.model";
-import { RoleElectionDay } from "../role-election-day/role-election-day.model";
 import { getRedis } from "../../db/redis";
 import type { UserRole, JwtUser } from "../../middleware/auth";
 import crypto from "node:crypto";
@@ -16,14 +13,35 @@ const REFRESH_EXPIRES_SEC = 7 * 24 * 60 * 60; // 7 days
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_SEC = 15 * 60; // 15 min
 
-// Collections to search during login, in priority order
-const USER_COLLECTIONS = [
-  { model: SuperAdmin, role: "super_admin" as UserRole },
-  { model: AdminWilaya, role: "admin_wilaya" as UserRole },
-  { model: AdminCommun, role: "admin_commun" as UserRole },
-  { model: MemberActif, role: "member_actif" as UserRole },
-  { model: RoleElectionDay, role: "role_election_day" as UserRole },
-] as const;
+const DASHBOARD_ROLES: AdminRole[] = ["super_admin", "admin_wilaya", "admin_commun"];
+
+function refId(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === "object" && value !== null && "_id" in value) {
+    return String((value as { _id: unknown })._id);
+  }
+  return String(value);
+}
+
+export function toAuthUser(user: Record<string, unknown>) {
+  return {
+    id: String(user._id),
+    _id: String(user._id),
+    full_name: user.full_name as string,
+    email: user.email as string,
+    phone: user.phone as string,
+    nin: user.nin as string,
+    role: user.role as UserRole,
+    wilaya_id: refId(user.wilaya),
+    commune_id: refId(user.commune),
+    party_id: refId(user.party),
+    status: (user.status as string) || "active",
+    date_of_birth: user.date_of_birth
+      ? new Date(user.date_of_birth as string | Date).toISOString().slice(0, 10)
+      : undefined,
+    goal: user.goal as string | undefined,
+  };
+}
 
 function signAccessToken(user: JwtUser): string {
   return jwt.sign(
@@ -42,8 +60,6 @@ function signRefreshToken(sub: string, familyId: string): { token: string; jti: 
   );
   return { token, jti };
 }
-
-// ── Brute-force helpers ──────────────────────────────────────
 
 async function checkLockout(key: string): Promise<boolean> {
   const redis = getRedis();
@@ -66,60 +82,129 @@ async function clearAttempts(key: string): Promise<void> {
   await redis.del(`lockout:${key}`);
 }
 
-// ── Public API ───────────────────────────────────────────────
+export async function findAdminById(id: string) {
+  const user = await Admin.findById(id).populate("wilaya commune").lean();
+  if (!user) return null;
+  return toAuthUser(user as unknown as Record<string, unknown>);
+}
+
+export async function findMemberActifById(id: string) {
+  const user = await MemberActif.findById(id).populate("wilaya commune party").lean();
+  if (!user) return null;
+  const { password: _pw, ...safe } = user as typeof user & { password?: string };
+  return toAuthUser({ ...safe, role: "member_actif", status: "active" } as unknown as Record<string, unknown>);
+}
+
+/** Resolve dashboard user from Admin or MemberActif */
+export async function findUserById(id: string) {
+  const admin = await findAdminById(id);
+  if (admin) return admin;
+  return findMemberActifById(id);
+}
+
+async function issueSession(jwtUser: JwtUser, safeUser: Record<string, unknown>) {
+  const accessToken = signAccessToken(jwtUser);
+  const familyId = crypto.randomUUID();
+  const { token: refreshToken, jti } = signRefreshToken(jwtUser.sub, familyId);
+
+  const redis = getRedis();
+  if (redis) {
+    await redis.set(
+      `rt:${jti}`,
+      JSON.stringify({ familyId, sub: jwtUser.sub, used: false }),
+      "EX",
+      REFRESH_EXPIRES_SEC
+    );
+  }
+
+  return {
+    accessToken,
+    refreshToken,
+    user: toAuthUser(safeUser),
+  };
+}
+
+// ── Login: Admin first, then MemberActif ───────────────────────
 
 export async function login(emailInput: string, passwordInput: string, ip: string) {
-  // Check IP lockout
   if (await checkLockout(`ip:${ip}`)) {
     throw Object.assign(new Error("Too many login attempts. Try again later."), { status: 429 });
   }
 
-  for (const { model, role } of USER_COLLECTIONS) {
-    const user = await (model as any).findOne({ email: emailInput, status: "active" }).select("+password").lean();
-    if (!user) continue;
+  const emailNorm = emailInput.toLowerCase().trim();
 
-    // Check account lockout
-    if (await checkLockout(`acct:${user._id}`)) {
+  const admin = await Admin.findOne({ email: emailNorm, status: "active" })
+    .select("+password")
+    .populate("wilaya commune")
+    .lean();
+
+  if (admin) {
+    if (!DASHBOARD_ROLES.includes(admin.role as AdminRole)) {
+      throw Object.assign(new Error("Access denied for this account type"), { status: 403 });
+    }
+
+    if (await checkLockout(`acct:${admin._id}`)) {
       throw Object.assign(new Error("Account locked. Try again later."), { status: 429 });
     }
 
-    const match = await bcrypt.compare(passwordInput, user.password);
+    const match = await bcrypt.compare(passwordInput, admin.password);
     if (!match) {
       await recordFailedAttempt(`ip:${ip}`);
-      await recordFailedAttempt(`acct:${user._id}`);
-      continue;
+      await recordFailedAttempt(`acct:${admin._id}`);
+      throw Object.assign(new Error("Invalid email or password"), { status: 401 });
     }
 
-    // Successful login — clear lockout counters
     await clearAttempts(`ip:${ip}`);
-    await clearAttempts(`acct:${user._id}`);
+    await clearAttempts(`acct:${admin._id}`);
 
     const jwtUser: JwtUser = {
-      sub: String(user._id),
-      role,
-      wilaya_id: (user as any).wilaya ? String((user as any).wilaya) : undefined,
-      commune_id: (user as any).commune ? String((user as any).commune) : undefined,
+      sub: String(admin._id),
+      role: admin.role as UserRole,
+      wilaya_id: refId(admin.wilaya),
+      commune_id: refId(admin.commune),
     };
 
-    const accessToken = signAccessToken(jwtUser);
-    const familyId = crypto.randomUUID();
-    const { token: refreshToken, jti } = signRefreshToken(jwtUser.sub, familyId);
-
-    // Store refresh token family in Redis
-    const redis = getRedis();
-    if (redis) {
-      await redis.set(`rt:${jti}`, JSON.stringify({ familyId, sub: jwtUser.sub, used: false }), "EX", REFRESH_EXPIRES_SEC);
-    }
-
-    // Strip password from returned user
-    const { password: _pw, ...safeUser } = user;
-
-    return { accessToken, refreshToken, user: { ...safeUser, id: safeUser._id, role } };
+    const { password: _pw, ...safeUser } = admin;
+    return await issueSession(jwtUser, { ...safeUser, role: admin.role } as unknown as Record<string, unknown>);
   }
 
-  // No match found — record failed attempt
-  await recordFailedAttempt(`ip:${ip}`);
-  throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+  const member = await MemberActif.findOne({ email: emailNorm })
+    .select("+password")
+    .populate("wilaya commune party")
+    .lean();
+
+  if (!member) {
+    await recordFailedAttempt(`ip:${ip}`);
+    throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+  }
+
+  if (await checkLockout(`acct:${member._id}`)) {
+    throw Object.assign(new Error("Account locked. Try again later."), { status: 429 });
+  }
+
+  const matchMember = await bcrypt.compare(passwordInput, member.password);
+  if (!matchMember) {
+    await recordFailedAttempt(`ip:${ip}`);
+    await recordFailedAttempt(`acct:${member._id}`);
+    throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+  }
+
+  await clearAttempts(`ip:${ip}`);
+  await clearAttempts(`acct:${member._id}`);
+
+  const jwtUser: JwtUser = {
+    sub: String(member._id),
+    role: "member_actif",
+    wilaya_id: refId(member.wilaya),
+    commune_id: refId(member.commune),
+  };
+
+  const { password: _pw, ...safeMember } = member;
+  return await issueSession(jwtUser, {
+    ...safeMember,
+    role: "member_actif",
+    status: "active",
+  } as unknown as Record<string, unknown>);
 }
 
 export async function refreshTokens(oldRefreshToken: string) {
@@ -152,9 +237,7 @@ export async function refreshTokens(oldRefreshToken: string) {
 
   const meta = JSON.parse(stored) as { familyId: string; sub: string; used: boolean };
 
-  // REUSE DETECTION — if already used, revoke entire family
   if (meta.used) {
-    // Scan and delete all tokens in this family
     const keys = await redis.keys(`rt:*`);
     for (const key of keys) {
       const val = await redis.get(key);
@@ -168,24 +251,30 @@ export async function refreshTokens(oldRefreshToken: string) {
     throw Object.assign(new Error("Refresh token reuse detected — session revoked"), { status: 401 });
   }
 
-  // Mark old token as used
   await redis.set(`rt:${jti}`, JSON.stringify({ ...meta, used: true }), "EX", 60);
 
-  // Find user to rebuild access token
-  let role: UserRole = "citizen";
-  let userDoc: any = null;
-  for (const { model, role: r } of USER_COLLECTIONS) {
-    userDoc = await (model as any).findById(sub).lean();
-    if (userDoc) { role = r; break; }
-  }
-  if (!userDoc) throw Object.assign(new Error("User not found"), { status: 401 });
+  let jwtUser: JwtUser;
 
-  const jwtUser: JwtUser = {
-    sub,
-    role,
-    wilaya_id: userDoc.wilaya ? String(userDoc.wilaya) : undefined,
-    commune_id: userDoc.commune ? String(userDoc.commune) : undefined,
-  };
+  const userDoc = await Admin.findById(sub).lean();
+  if (userDoc && userDoc.status === "active") {
+    jwtUser = {
+      sub,
+      role: userDoc.role as UserRole,
+      wilaya_id: userDoc.wilaya ? String(userDoc.wilaya) : undefined,
+      commune_id: userDoc.commune ? String(userDoc.commune) : undefined,
+    };
+  } else {
+    const memberDoc = await MemberActif.findById(sub).lean();
+    if (!memberDoc) {
+      throw Object.assign(new Error("User not found"), { status: 401 });
+    }
+    jwtUser = {
+      sub,
+      role: "member_actif",
+      wilaya_id: memberDoc.wilaya ? String(memberDoc.wilaya) : undefined,
+      commune_id: memberDoc.commune ? String(memberDoc.commune) : undefined,
+    };
+  }
 
   const accessToken = signAccessToken(jwtUser);
   const { token: newRefreshToken, jti: newJti } = signRefreshToken(sub, familyId);
@@ -197,13 +286,142 @@ export async function refreshTokens(oldRefreshToken: string) {
 export async function logout(refreshToken: string): Promise<void> {
   try {
     const decoded = jwt.verify(refreshToken, env.jwt.accessSecret, {
-      issuer: env.jwt.issuer, audience: env.jwt.audience,
+      issuer: env.jwt.issuer,
+      audience: env.jwt.audience,
     }) as jwt.JwtPayload;
     const redis = getRedis();
     if (redis && decoded.jti) await redis.del(`rt:${decoded.jti}`);
-  } catch { /* token already expired — that's fine */ }
+  } catch { /* token already expired */ }
 }
 
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, BCRYPT_ROUNDS);
+}
+
+/** Public registration — always creates role super_admin */
+export async function registerSuperAdmin(data: {
+  full_name: string;
+  email: string;
+  password: string;
+  phone: string;
+  nin: string;
+}) {
+  const emailNorm = data.email.toLowerCase().trim();
+
+  if (await Admin.findOne({ email: emailNorm })) {
+    throw Object.assign(new Error("Email already registered"), { status: 409 });
+  }
+  if (await Admin.findOne({ nin: data.nin.trim() })) {
+    throw Object.assign(new Error("NIN already registered"), { status: 409 });
+  }
+
+  const hashed = await hashPassword(data.password);
+  await Admin.create({
+    full_name: data.full_name.trim(),
+    email: emailNorm,
+    password: hashed,
+    phone: data.phone.trim(),
+    nin: data.nin.trim(),
+    role: "super_admin",
+    status: "active",
+  });
+
+  return await login(emailNorm, data.password, "register");
+}
+
+async function assertEmailAvailable(emailNorm: string, userId: string): Promise<void> {
+  const adminTaken = await Admin.findOne({ email: emailNorm });
+  if (adminTaken && String(adminTaken._id) !== userId) {
+    throw Object.assign(new Error("Email already in use"), { status: 409 });
+  }
+  const memberTaken = await MemberActif.findOne({ email: emailNorm });
+  if (memberTaken && String(memberTaken._id) !== userId) {
+    throw Object.assign(new Error("Email already in use"), { status: 409 });
+  }
+}
+
+export async function updateProfile(
+  userId: string,
+  role: UserRole,
+  data: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    goal?: string;
+    date_of_birth?: string;
+  }
+) {
+  if (role === "member_actif") {
+    const member = await MemberActif.findById(userId);
+    if (!member) {
+      throw Object.assign(new Error("User not found"), { status: 404 });
+    }
+    if (data.full_name !== undefined) member.full_name = data.full_name.trim();
+    if (data.phone !== undefined) member.phone = data.phone.trim();
+    if (data.goal !== undefined) member.goal = data.goal.trim() || undefined;
+    if (data.date_of_birth !== undefined) {
+      member.date_of_birth = new Date(data.date_of_birth);
+    }
+    if (data.email !== undefined) {
+      const emailNorm = data.email.toLowerCase().trim();
+      if (emailNorm !== member.email) {
+        await assertEmailAvailable(emailNorm, userId);
+        member.email = emailNorm;
+      }
+    }
+    await member.save();
+    const updated = await findMemberActifById(userId);
+    if (!updated) throw Object.assign(new Error("User not found"), { status: 404 });
+    return updated;
+  }
+
+  const admin = await Admin.findById(userId);
+  if (!admin) {
+    throw Object.assign(new Error("User not found"), { status: 404 });
+  }
+  if (data.full_name !== undefined) admin.full_name = data.full_name.trim();
+  if (data.phone !== undefined) admin.phone = data.phone.trim();
+  if (data.email !== undefined) {
+    const emailNorm = data.email.toLowerCase().trim();
+    if (emailNorm !== admin.email) {
+      await assertEmailAvailable(emailNorm, userId);
+      admin.email = emailNorm;
+    }
+  }
+  await admin.save();
+  const updated = await findAdminById(userId);
+  if (!updated) throw Object.assign(new Error("User not found"), { status: 404 });
+  return updated;
+}
+
+export async function changePassword(
+  userId: string,
+  role: UserRole,
+  currentPassword: string,
+  newPassword: string
+) {
+  if (role === "member_actif") {
+    const member = await MemberActif.findById(userId).select("+password");
+    if (!member) {
+      throw Object.assign(new Error("User not found"), { status: 404 });
+    }
+    const match = await bcrypt.compare(currentPassword, member.password);
+    if (!match) {
+      throw Object.assign(new Error("Current password is incorrect"), { status: 400 });
+    }
+    member.password = await hashPassword(newPassword);
+    await member.save();
+    return;
+  }
+
+  const admin = await Admin.findById(userId).select("+password");
+  if (!admin) {
+    throw Object.assign(new Error("User not found"), { status: 404 });
+  }
+  const match = await bcrypt.compare(currentPassword, admin.password);
+  if (!match) {
+    throw Object.assign(new Error("Current password is incorrect"), { status: 400 });
+  }
+  admin.password = await hashPassword(newPassword);
+  await admin.save();
 }
