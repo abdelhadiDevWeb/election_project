@@ -9,6 +9,8 @@ export interface ICitizen extends Document {
   nin: string;
   member_actif?: Types.ObjectId;
   party?: Types.ObjectId;
+  wilaya?: Types.ObjectId;
+  commune?: Types.ObjectId;
 }
 
 const citizenSchema = new Schema<ICitizen>(
@@ -21,6 +23,8 @@ const citizenSchema = new Schema<ICitizen>(
     nin: { type: String, required: true, unique: true, trim: true },
     member_actif: { type: Schema.Types.ObjectId, ref: "MemberActif" },
     party: { type: Schema.Types.ObjectId, ref: "Party" },
+    wilaya: { type: Schema.Types.ObjectId, ref: "Wilaya" },
+    commune: { type: Schema.Types.ObjectId, ref: "Commune" },
   },
   {
     timestamps: true,
@@ -37,5 +41,6 @@ const citizenSchema = new Schema<ICitizen>(
 
 citizenSchema.index({ member_actif: 1 });
 citizenSchema.index({ party: 1 });
+citizenSchema.index({ wilaya: 1, commune: 1 });
 
 export const Citizen = mongoose.model<ICitizen>("Citizen", citizenSchema);

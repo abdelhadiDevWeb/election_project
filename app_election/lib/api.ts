@@ -136,7 +136,11 @@ async function request<T = unknown>(
     let errorBody: any = null;
     try {
       errorBody = await res.json();
-      if (errorBody.message) errorMessage = errorBody.message;
+      if (Array.isArray(errorBody?.details) && errorBody.details.length > 0) {
+        errorMessage = errorBody.details.join(" · ");
+      } else if (errorBody.message) {
+        errorMessage = errorBody.message;
+      }
     } catch { /* ignore parse error */ }
     throw new ApiError(errorMessage, res.status, errorBody);
   }
@@ -190,11 +194,42 @@ export const api = {
     });
   },
 
+  registerSuperAdmin(body: {
+    full_name: string;
+    email: string;
+    password: string;
+    phone: string;
+    nin: string;
+  }): Promise<LoginResponse> {
+    return request<LoginResponse>("/auth/register", {
+      method: "POST",
+      body,
+      noAuth: true,
+    });
+  },
+
   logout(): Promise<ApiResponse> {
     return request<ApiResponse>("/auth/logout", { method: "POST" });
   },
 
   me(): Promise<{ ok: boolean; user: import("./types").AuthUser }> {
     return request("/auth/me");
+  },
+
+  updateProfile(body: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    goal?: string;
+    date_of_birth?: string;
+  }): Promise<{ ok: boolean; user: import("./types").AuthUser }> {
+    return request("/auth/me", { method: "PATCH", body });
+  },
+
+  changePassword(body: {
+    current_password: string;
+    new_password: string;
+  }): Promise<{ ok: boolean; message?: string }> {
+    return request("/auth/password", { method: "PATCH", body });
   },
 };

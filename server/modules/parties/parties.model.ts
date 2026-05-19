@@ -20,7 +20,7 @@ const partySchema = new Schema<IParty>(
     logo: { type: Buffer, select: false },
     logo_mimetype: { type: String, select: false },
     wilaya: { type: Schema.Types.ObjectId, ref: "Wilaya", required: true },
-    created_by: { type: Schema.Types.ObjectId, ref: "AdminWilaya" },
+    created_by: { type: Schema.Types.ObjectId, ref: "Admin" },
   },
   {
     timestamps: true,

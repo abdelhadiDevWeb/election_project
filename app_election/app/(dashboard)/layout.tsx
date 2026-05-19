@@ -8,6 +8,8 @@ import { DataProvider } from "./context/DataContext";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
+import { isMemberActifPath } from "@/lib/member-routes";
 
 export default function DashboardLayout({
   children,
@@ -15,8 +17,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { dir } = useLanguage();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -25,7 +28,23 @@ export default function DashboardLayout({
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Show loading state while checking auth
+  useEffect(() => {
+    if (!isLoading && user?.role === "member_actif") {
+      if (pathname === "/mes-candidats") {
+        router.replace("/mes-citoyens");
+        return;
+      }
+      if (!isMemberActifPath(pathname)) {
+        router.replace("/");
+      }
+    }
+    if (!isLoading && user?.role === "admin_commun") {
+      if (pathname === "/entites-politiques") {
+        router.replace("/");
+      }
+    }
+  }, [isLoading, user?.role, pathname, router]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white dark:bg-[#09090b]">
@@ -39,7 +58,6 @@ export default function DashboardLayout({
     );
   }
 
-  // Don't render dashboard if not authenticated
   if (!isAuthenticated) {
     return null;
   }
@@ -48,14 +66,14 @@ export default function DashboardLayout({
     <DataProvider>
       <div className="flex min-h-screen relative w-full overflow-x-hidden">
         <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-        <div className={cn(
-          "flex-1 flex flex-col transition-all duration-300 w-full min-w-0",
-          dir === 'rtl' ? 'lg:pr-72 pl-0' : 'lg:pl-72 pr-0'
-        )}>
+        <div
+          className={cn(
+            "flex-1 flex flex-col transition-all duration-300 w-full min-w-0",
+            dir === "rtl" ? "lg:pr-72 pl-0" : "lg:pl-72 pr-0"
+          )}
+        >
           <Header toggleSidebar={() => setIsSidebarOpen(true)} />
-          <main className="flex-1 p-4 lg:p-8 w-full">
-            {children}
-          </main>
+          <main className="flex-1 p-4 lg:p-8 w-full">{children}</main>
         </div>
       </div>
     </DataProvider>

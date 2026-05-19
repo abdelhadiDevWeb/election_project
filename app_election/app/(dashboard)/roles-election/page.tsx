@@ -281,7 +281,7 @@ export default function RolesElection() {
       <DataTable 
         title={language === 'ar' ? "مراقبة الاعتمادات المؤقتة" : "Contrôle des Accréditations Temporaires"}
         columns={[
-          { header: language === 'ar' ? "الموظفون المعتمدون" : "Personnel Accrédité", accessor: "name", render: (val, row: any) => (
+          { header: language === 'ar' ? "الموظفون المعتمدون" : "Personnel Accrédité", accessor: "name", render: (val: any, row: any) => (
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-white/10 flex items-center justify-center border border-zinc-200 dark:border-white/10">
                 <Fingerprint size={18} className="text-emerald-500" />
@@ -292,7 +292,7 @@ export default function RolesElection() {
               </div>
             </div>
           )},
-          { header: language === 'ar' ? "المهمة" : "Mission", accessor: "role", render: (val) => {
+          { header: language === 'ar' ? "المهمة" : "Mission", accessor: "role", render: (val: any) => {
             const roleKey = val === "Chef de Centre" ? "roles.chef" : 
                             val === "Observateur Bureau" ? "roles.obs_bureau" : 
                             val === "Observateur Centre" ? "roles.obs_center" : null;
@@ -305,13 +305,13 @@ export default function RolesElection() {
               </div>
             );
           }},
-          { header: language === 'ar' ? "المنطقة المعينة" : "Zone Affectée", accessor: "location", render: (val) => (
+          { header: language === 'ar' ? "المنطقة المعينة" : "Zone Affectée", accessor: "location", render: (val: any) => (
             <div className="flex items-center gap-2">
               <MapPin size={14} className="text-zinc-400" />
               <span className="text-[11px] font-bold text-zinc-500 truncate max-w-[150px]">{val}</span>
             </div>
           )},
-          { header: language === 'ar' ? "رمز الوصول" : "Token d'Accès", accessor: "code", render: (val) => (
+          { header: language === 'ar' ? "رمز الوصول" : "Token d'Accès", accessor: "code", render: (val: any) => (
             <div className="flex items-center gap-2">
               <QrCode size={14} className="text-zinc-400" />
               <code className="bg-zinc-100 dark:bg-white/10 px-2 py-1 rounded font-mono text-[10px] text-emerald-500 font-black border border-emerald-500/10 uppercase tracking-wider">
@@ -319,7 +319,7 @@ export default function RolesElection() {
               </code>
             </div>
           )},
-          { header: language === 'ar' ? "التحقق" : "Vérification", accessor: "status", render: (val) => (
+          { header: language === 'ar' ? "التحقق" : "Vérification", accessor: "status", render: (val: any) => (
             <div className="flex items-center gap-2">
               <div className={cn("h-1.5 w-1.5 rounded-full animate-pulse", (val === 'Actif' || val === 'نشط') ? "bg-emerald-500" : "bg-zinc-400")} />
               <span className={cn(
@@ -330,7 +330,7 @@ export default function RolesElection() {
               </span>
             </div>
           )},
-          { header: language === 'ar' ? "الصلاحية" : "Validité", accessor: "expires", render: (val) => (
+          { header: language === 'ar' ? "الصلاحية" : "Validité", accessor: "expires", render: (val: any) => (
             <div className="flex items-center gap-2">
               <Clock size={12} className="text-zinc-400" />
               <span className="text-[11px] font-bold text-zinc-500">{val}</span>
@@ -338,8 +338,8 @@ export default function RolesElection() {
           )},
         ]}
         data={observersData}
-        onEdit={(row) => openModal(row)}
-        onDelete={(row) => handleDelete(row.id)}
+        onEdit={(row: any) => openModal(row)}
+        onDelete={(row: any) => handleDelete(row.id)}
       />
     </div>
   );

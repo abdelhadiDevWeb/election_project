@@ -1,24 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Users, 
-  MapPin, 
-  Flag, 
-  CheckCircle, 
+import { usePathname, useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  MapPin,
+  Flag,
+  CheckCircle,
   Calendar,
-  ShieldCheck,
   Search,
   Settings,
-  HelpCircle,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { useAuth } from "@/app/context/AuthContext";
 import { AlgeriaMapIcon } from "./AlgeriaMapIcon";
+import { useMemo, useState } from "react";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -27,31 +29,58 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, setIsOpen }: SidebarProps = {}) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t, dir, language } = useLanguage();
+  const { user, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const navigationGroups = [
-    {
-      title: language === 'ar' ? 'الرئيسية' : 'Principal',
-      items: [
-        { name: t("nav.overview"), href: "/", icon: LayoutDashboard },
-      ]
-    },
-    {
-      title: language === 'ar' ? 'الإدارة' : 'Administration',
-      items: [
-        { name: t("nav.access"), href: "/gestion-acces", icon: Users },
-        { name: t("nav.infrastructure"), href: "/infrastructure", icon: MapPin },
-      ]
-    },
-    {
-      title: language === 'ar' ? 'العمليات الانتخابية' : 'Opérations Électorales',
-      items: [
-        { name: t("nav.entities"), href: "/entites-politiques", icon: Flag },
-        { name: t("nav.validation"), href: "/validation", icon: CheckCircle },
-        { name: t("nav.roles"), href: "/roles-election", icon: Calendar },
-      ]
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setIsOpen?.(false);
+    try {
+      await logout();
+      router.push("/login");
+    } finally {
+      setIsLoggingOut(false);
     }
-  ];
+  };
+
+  const navigationGroups = useMemo(() => {
+    if (user?.role === "member_actif") {
+      return [
+        {
+          title: language === "ar" ? "الرئيسية" : "Principal",
+          items: [
+            { name: t("nav.overview"), href: "/", icon: LayoutDashboard },
+            { name: language === "ar" ? "مواطني" : "Mes Citoyens", href: "/mes-citoyens", icon: UsersRound },
+          ],
+        },
+      ];
+    }
+    return [
+      {
+        title: language === "ar" ? "الرئيسية" : "Principal",
+        items: [{ name: t("nav.overview"), href: "/", icon: LayoutDashboard }],
+      },
+      {
+        title: language === "ar" ? "الإدارة" : "Administration",
+        items: [
+          { name: t("nav.access"), href: "/gestion-acces", icon: Users },
+          { name: t("nav.infrastructure"), href: "/infrastructure", icon: MapPin },
+          { name: t("nav.citizens"), href: "/citoyens", icon: UsersRound },
+        ],
+      },
+      {
+        title: language === "ar" ? "العمليات الانتخابية" : "Opérations Électorales",
+        items: [
+          user?.role !== "admin_commun" && { name: t("nav.entities"), href: "/entites-politiques", icon: Flag },
+          { name: t("nav.validation"), href: "/validation", icon: CheckCircle },
+          { name: t("nav.roles"), href: "/roles-election", icon: Calendar },
+        ].filter(Boolean) as { name: string; href: string; icon: any }[],
+      },
+    ];
+  }, [user?.role, language, t]);
 
   return (
     <>
@@ -169,16 +198,67 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps = {}) {
         ))}
       </nav>
 
-      {/* Footer Actions */}
-      <div className="mt-auto px-2 pt-6 border-t border-zinc-100 dark:border-white/5 space-y-1">
-        <Link href="/settings" onClick={() => setIsOpen?.(false)} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 transition-all">
-          <Settings size={18} />
+      {/* Footer */}
+      <div className="mt-auto space-y-1 border-t border-zinc-100 px-2 pt-4 dark:border-white/5">
+        <Link
+          href="/settings"
+          onClick={() => setIsOpen?.(false)}
+          className={cn(
+            "group flex items-center gap-3 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-all duration-300",
+            pathname === "/settings"
+              ? "bg-zinc-100 text-algerian-green dark:bg-white/10 dark:text-white"
+              : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:hover:bg-white/5 dark:hover:text-white"
+          )}
+        >
+          <motion.div whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }}>
+            <Settings
+              size={17}
+              className={cn(
+                "transition-colors",
+                pathname === "/settings"
+                  ? "text-algerian-green"
+                  : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
+              )}
+            />
+          </motion.div>
           <span>{t("nav.settings")}</span>
         </Link>
-        <Link href="/help" onClick={() => setIsOpen?.(false)} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 transition-all">
-          <HelpCircle size={18} />
-          <span>{language === 'ar' ? 'المساعدة والدعم' : 'Aide & Support'}</span>
-        </Link>
+
+        <motion.button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          className={cn(
+            "group flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-all duration-300",
+            "text-red-600 hover:bg-red-50/50 hover:text-red-700 dark:text-red-400/90 dark:hover:bg-red-500/10 dark:hover:text-red-300",
+            isLoggingOut && "pointer-events-none opacity-50"
+          )}
+        >
+          <motion.span
+            className="flex shrink-0 items-center justify-center transition-transform"
+            animate={isLoggingOut ? { x: [0, 3, 0] } : {}}
+            whileHover={
+              isLoggingOut
+                ? undefined
+                : {
+                    x: dir === "rtl" ? -2 : 2,
+                    transition: { duration: 0.3, ease: "easeInOut" },
+                  }
+            }
+            transition={isLoggingOut ? { duration: 0.8, repeat: Infinity, ease: "easeInOut" } : undefined}
+          >
+            <LogOut size={17} className="text-red-500 dark:text-red-400" />
+          </motion.span>
+          <span className="flex-1 text-start">
+            {isLoggingOut
+              ? language === "ar"
+                ? "جاري الخروج..."
+                : "Déconnexion..."
+              : t("nav.logout")}
+          </span>
+        </motion.button>
       </div>
     </div>
     </>
