@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (getAccessToken()) {
           const meRes = await api.me();
           if (!cancelled && meRes.ok && meRes.user) {
-            const normalized = normalizeAuthUser(meRes.user as Record<string, unknown>);
+            const normalized = normalizeAuthUser(meRes.user as any);
             setUser(normalized);
           }
         }
