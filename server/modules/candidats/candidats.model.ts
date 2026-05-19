@@ -9,6 +9,8 @@ export interface ICandidat extends Document {
   image_mimetype?: string;
   party: Types.ObjectId;
   wilaya: Types.ObjectId;
+  commune?: Types.ObjectId;
+  created_by?: Types.ObjectId;
   is_favorite: boolean;
   result: number;
 }
@@ -23,6 +25,8 @@ const candidatSchema = new Schema<ICandidat>(
     image_mimetype: { type: String, select: false },
     party: { type: Schema.Types.ObjectId, ref: "Party" },
     wilaya: { type: Schema.Types.ObjectId, ref: "Wilaya", required: true },
+    commune: { type: Schema.Types.ObjectId, ref: "Commune" },
+    created_by: { type: Schema.Types.ObjectId, ref: "MemberActif" },
     is_favorite: { type: Boolean, default: false },
     result: { type: Number, default: 0, min: 0 },
   },
@@ -41,6 +45,8 @@ const candidatSchema = new Schema<ICandidat>(
 );
 
 candidatSchema.index({ party: 1, wilaya: 1 });
+candidatSchema.index({ wilaya: 1, commune: 1 });
 candidatSchema.index({ wilaya: 1, result: -1 });
+candidatSchema.index({ created_by: 1 });
 
 export const Candidat = mongoose.model<ICandidat>("Candidat", candidatSchema);

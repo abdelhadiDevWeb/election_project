@@ -1,117 +1,249 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Settings2, 
-  User, 
-  Bell, 
-  Shield, 
-  Palette, 
-  Globe, 
-  Smartphone, 
-  Check, 
-  Lock, 
-  Mail, 
+import {
+  Settings2,
+  User,
+  Bell,
+  Shield,
+  Palette,
+  Check,
   Save,
   Moon,
   Sun,
-  Laptop
+  Laptop,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
+import { useAuth } from "@/app/context/AuthContext";
+import { useTheme, type ThemeMode } from "@/app/context/ThemeContext";
+import { api, ApiError } from "@/lib/api";
+import { normalizeAuthUser } from "@/lib/auth-user";
+import type { AuthUser, UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+type TabId = "profile" | "security" | "notifications" | "appearance";
+
+function roleLabel(role: UserRole, language: string): string {
+  const map: Record<UserRole, { fr: string; ar: string }> = {
+    super_admin: { fr: "Super administrateur", ar: "المشرف العام" },
+    admin_wilaya: { fr: "Administrateur wilaya", ar: "مشرف الولاية" },
+    admin_commun: { fr: "Administrateur commune", ar: "مشرف البلدية" },
+    member_actif: { fr: "Membre actif", ar: "عضو نشط" },
+    role_election_day: { fr: "Rôle jour J", ar: "دور يوم الانتخاب" },
+    citizen: { fr: "Citoyen", ar: "مواطن" },
+  };
+  const entry = map[role];
+  return language === "ar" ? entry.ar : entry.fr;
+}
+
+type ProfileForm = {
+  full_name: string;
+  email: string;
+  phone: string;
+  goal: string;
+  date_of_birth: string;
+};
+
+function userToForm(user: AuthUser): ProfileForm {
+  return {
+    full_name: user.full_name || "",
+    email: user.email || "",
+    phone: user.phone || "",
+    goal: user.goal || "",
+    date_of_birth: user.date_of_birth ? user.date_of_birth.slice(0, 10) : "",
+  };
+}
 
 export default function SettingsPage() {
   const { t, language, setLanguage, dir } = useLanguage();
-  const [activeTab, setActiveTab] = useState<"profile" | "security" | "notifications" | "appearance">("profile");
-  const [isSaving, setIsSaving] = useState(false);
+  const { user, refreshUser, setUser, isLoading: authLoading } = useAuth();
+  const { theme, setTheme } = useTheme();
+
+  const [activeTab, setActiveTab] = useState<TabId>("profile");
+  const [profileForm, setProfileForm] = useState<ProfileForm>({
+    full_name: "",
+    email: "",
+    phone: "",
+    goal: "",
+    date_of_birth: "",
+  });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [isEditingSecurity, setIsEditingSecurity] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const syncProfileFromUser = useCallback((u: AuthUser) => {
+    setProfileForm(userToForm(u));
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    syncProfileFromUser(user);
+  }, [user, syncProfileFromUser]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      refreshUser().catch(() => undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const tabs = [
-    { id: "profile", label: language === 'ar' ? 'الملف الشخصي' : 'Profil', icon: User },
-    { id: "security", label: language === 'ar' ? 'الأمان' : 'Sécurité', icon: Shield },
-    { id: "notifications", label: language === 'ar' ? 'الإشعارات' : 'Notifications', icon: Bell },
-    { id: "appearance", label: language === 'ar' ? 'المظهر' : 'Apparence', icon: Palette },
-  ] as const;
+    { id: "profile" as const, label: language === "ar" ? "الملف الشخصي" : "Profil", icon: User },
+    { id: "security" as const, label: language === "ar" ? "الأمان" : "Sécurité", icon: Shield },
+    { id: "notifications" as const, label: language === "ar" ? "الإشعارات" : "Notifications", icon: Bell },
+    { id: "appearance" as const, label: language === "ar" ? "المظهر" : "Apparence", icon: Palette },
+  ];
 
-  const handleSave = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 1500);
+  const inputClass = (editable: boolean) =>
+    cn(
+      "w-full h-12 px-4 rounded-xl outline-none text-sm font-bold transition-all",
+      editable
+        ? "bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:ring-2 focus:ring-algerian-green/20"
+        : "bg-zinc-50 dark:bg-white/5 border border-transparent text-zinc-500 cursor-not-allowed"
+    );
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setProfileSaving(true);
+    setProfileMessage(null);
+    try {
+      const body: Record<string, string> = {
+        full_name: profileForm.full_name.trim(),
+        email: profileForm.email.trim(),
+        phone: profileForm.phone.trim(),
+      };
+      if (user.role === "member_actif") {
+        if (profileForm.goal !== undefined) body.goal = profileForm.goal.trim();
+        if (profileForm.date_of_birth) body.date_of_birth = profileForm.date_of_birth;
+      }
+      const res = await api.updateProfile(body);
+      if (res.ok && res.user) {
+        const normalized = normalizeAuthUser(res.user as unknown as Record<string, unknown>);
+        if (normalized) {
+          setUser(normalized);
+          syncProfileFromUser(normalized);
+        }
+        setIsEditingProfile(false);
+        setProfileMessage({
+          type: "ok",
+          text: language === "ar" ? "تم تحديث الملف الشخصي" : "Profil mis à jour",
+        });
+      }
+    } catch (err) {
+      const text =
+        err instanceof ApiError ? err.message : language === "ar" ? "فشل التحديث" : "Échec de la mise à jour";
+      setProfileMessage({ type: "err", text });
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
+  const handleChangePassword = async () => {
+    setPasswordMessage(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({
+        type: "err",
+        text: language === "ar" ? "كلمتا المرور غير متطابقتين" : "Les mots de passe ne correspondent pas",
+      });
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await api.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMessage({
+        type: "ok",
+        text: language === "ar" ? "تم تغيير كلمة المرور" : "Mot de passe modifié",
+      });
+    } catch (err) {
+      const text =
+        err instanceof ApiError ? err.message : language === "ar" ? "فشل تغيير كلمة المرور" : "Échec du changement";
+      setPasswordMessage({ type: "err", text });
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const cancelProfileEdit = () => {
+    if (user) syncProfileFromUser(user);
+    setIsEditingProfile(false);
+    setProfileMessage(null);
+  };
+
+  if (authLoading && !user) {
+    return (
+      <motion.div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="animate-spin text-zinc-400" size={32} />
+      </motion.div>
+    );
+  }
+
   return (
-    <div className="space-y-10 pb-20">
-      {/* Page Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-        <motion.div 
+    <div className="w-full min-w-0 space-y-10 pb-20">
+      <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="space-y-2 flex-1 flex-shrink-0"
+          className="min-w-0 flex-1 space-y-2"
         >
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 w-fit">
+          <div className="flex w-fit items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1">
             <Settings2 size={12} className="text-blue-500" />
             <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">
-              {language === 'ar' ? 'تكوين النظام' : 'Configuration Système'}
+              {language === "ar" ? "تكوين الحساب" : "Configuration du compte"}
             </span>
           </div>
-          <h1 className="text-4xl font-black text-zinc-900 dark:text-white lg:text-4xl lg:whitespace-nowrap font-plus-jakarta">
+          <h1 className="w-full text-3xl font-black text-zinc-900 dark:text-white font-plus-jakarta md:text-4xl">
             {t("nav.settings")}
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium max-w-2xl leading-relaxed w-full min-w-[300px]">
-            {language === 'ar' 
-              ? 'إدارة تفضيلات حسابك، وإعدادات الأمان، وتخصيص واجهة منصة السلطة الوطنية المستقلة للانتخابات.' 
-              : 'Gérez vos préférences de compte, les paramètres de sécurité et personnalisez l\'interface de la plateforme de l\'ANIE.'}
+          <p className="w-full max-w-full text-sm font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
+            {language === "ar"
+              ? "عرض وتعديل معلومات حسابك وكلمة المرور ومظهر الواجهة."
+              : "Consultez et modifiez vos informations, votre mot de passe et l'apparence de l'interface."}
           </p>
         </motion.div>
-
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className="h-12 px-6 rounded-2xl bg-algerian-green text-white text-[11px] font-black uppercase tracking-widest hover:bg-algerian-green-dark transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              >
-                <Settings2 size={16} />
-              </motion.div>
-            ) : (
-              <Save size={16} />
-            )}
-            {language === 'ar' ? 'حفظ التغييرات' : 'Sauvegarder'}
-          </button>
-        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar Navigation */}
-        <div className="w-full lg:w-64 flex-shrink-0">
-          <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 custom-scrollbar">
+      <div className="flex flex-col gap-8 lg:flex-row">
+        <div className="w-full shrink-0 lg:w-64">
+          <div className="custom-scrollbar flex flex-row gap-2 overflow-x-auto pb-4 lg:flex-col lg:pb-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-3 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-300 relative whitespace-nowrap",
+                  "relative flex items-center gap-3 whitespace-nowrap rounded-2xl border px-5 py-4 text-xs font-black uppercase tracking-widest transition-all duration-300",
                   activeTab === tab.id
-                    ? "bg-white dark:bg-white/10 text-zinc-900 dark:text-white shadow-sm border border-zinc-200 dark:border-white/5"
-                    : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white border border-transparent"
+                    ? "border-zinc-200 bg-white text-zinc-900 shadow-sm dark:border-white/5 dark:bg-white/10 dark:text-white"
+                    : "border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/5 dark:hover:text-white"
                 )}
               >
-                <tab.icon size={18} strokeWidth={2.5} className={cn(
-                  activeTab === tab.id ? "text-algerian-green" : "text-zinc-400"
-                )} />
+                <tab.icon
+                  size={18}
+                  strokeWidth={2.5}
+                  className={cn(activeTab === tab.id ? "text-algerian-green" : "text-zinc-400")}
+                />
                 {tab.label}
                 {activeTab === tab.id && (
-                  <motion.div 
-                    layoutId="activeIndicator"
-                    className="absolute left-0 w-1 h-8 bg-algerian-green rounded-r-full"
-                    style={{ left: dir === 'rtl' ? 'auto' : 0, right: dir === 'rtl' ? 0 : 'auto' }}
+                  <motion.div
+                    layoutId="settingsTab"
+                    className="absolute top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-algerian-green"
+                    style={{ left: dir === "rtl" ? "auto" : 0, right: dir === "rtl" ? 0 : "auto" }}
                   />
                 )}
               </button>
@@ -119,8 +251,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -128,293 +259,301 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
-              className="glass dark:bg-[#09090b] border border-zinc-200 dark:border-white/5 rounded-[32px] p-6 lg:p-10 shadow-sm"
+              className="glass rounded-[32px] border border-zinc-200 p-6 shadow-sm dark:border-white/5 dark:bg-[#09090b] lg:p-10"
             >
-              {activeTab === "profile" && (
+              {activeTab === "profile" && user && (
                 <div className="space-y-8">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-20 w-20 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center relative overflow-hidden group">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-100 dark:border-white/10 dark:bg-white/5">
                         <User size={32} className="text-zinc-400" />
-                        {isEditingProfile && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center transition-opacity cursor-pointer">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                              {language === 'ar' ? 'تغيير' : 'Modifier'}
-                            </span>
-                          </div>
-                        )}
                       </div>
                       <div>
-                        <h3 className="text-lg font-black text-zinc-900 dark:text-white">Admin Central</h3>
-                        <p className="text-sm font-medium text-zinc-500">Super Admin • ANIE</p>
+                        <h3 className="text-lg font-black text-zinc-900 dark:text-white">{user.full_name}</h3>
+                        <p className="text-sm font-medium text-zinc-500">
+                          {roleLabel(user.role, language)} • ANIE
+                        </p>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => setIsEditingProfile(!isEditingProfile)}
-                      className={cn(
-                        "h-10 px-5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
-                        isEditingProfile 
-                          ? "bg-algerian-green text-white hover:bg-algerian-green-dark" 
-                          : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/20"
+                    <div className="flex flex-wrap gap-2">
+                      {isEditingProfile ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={cancelProfileEdit}
+                            disabled={profileSaving}
+                            className="h-10 rounded-xl bg-zinc-100 px-5 text-[11px] font-black uppercase tracking-widest text-zinc-600 transition-all hover:bg-zinc-200 disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                          >
+                            {language === "ar" ? "إلغاء" : "Annuler"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveProfile}
+                            disabled={profileSaving}
+                            className="flex h-10 items-center gap-2 rounded-xl bg-algerian-green px-5 text-[11px] font-black uppercase tracking-widest text-white transition-all hover:bg-algerian-green-dark disabled:opacity-50"
+                          >
+                            {profileSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                            {language === "ar" ? "حفظ" : "Enregistrer"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingProfile(true)}
+                          className="h-10 rounded-xl bg-zinc-100 px-5 text-[11px] font-black uppercase tracking-widest text-zinc-600 transition-all hover:bg-zinc-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                        >
+                          {language === "ar" ? "تعديل" : "Modifier"}
+                        </button>
                       )}
-                    >
-                      {isEditingProfile 
-                        ? (language === 'ar' ? 'حفظ التعديلات' : 'Enregistrer') 
-                        : (language === 'ar' ? 'تعديل' : 'Modifier')}
-                    </button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {profileMessage && (
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold",
+                        profileMessage.type === "ok"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "bg-red-500/10 text-red-600 dark:text-red-400"
+                      )}
+                    >
+                      {profileMessage.type === "ok" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                      {profileMessage.text}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        {language === 'ar' ? 'الاسم الكامل' : 'Nom Complet'}
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "الاسم الكامل" : "Nom complet"}
                       </label>
-                      <input 
-                        type="text" 
-                        defaultValue="Admin Central"
+                      <input
+                        type="text"
+                        value={profileForm.full_name}
+                        onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))}
                         disabled={!isEditingProfile}
-                        className={cn("w-full h-12 px-4 rounded-xl outline-none text-sm font-bold transition-all", isEditingProfile ? "bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:ring-2 focus:ring-algerian-green/20" : "bg-zinc-50 dark:bg-white/5 border border-transparent text-zinc-500 cursor-not-allowed")} 
+                        className={inputClass(isEditingProfile)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        {language === 'ar' ? 'البريد الإلكتروني' : 'Adresse Email'}
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "البريد الإلكتروني" : "Adresse e-mail"}
                       </label>
-                      <div className="relative">
-                        <input 
-                          type="email" 
-                          defaultValue="admin@anie.dz"
-                          disabled={!isEditingProfile}
-                          className={cn(
-                            "w-full h-12 rounded-xl outline-none text-sm font-bold transition-all", 
-                            dir === 'rtl' ? "pr-4 pl-20" : "pl-4 pr-20",
-                            isEditingProfile 
-                              ? "bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:ring-2 focus:ring-algerian-green/20" 
-                              : "bg-zinc-50 dark:bg-white/5 border border-transparent text-zinc-500 cursor-not-allowed"
-                          )} 
-                        />
-                        <div className={cn(
-                          "absolute top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-500",
-                          dir === 'rtl' ? "left-4" : "right-4"
-                        )}>
-                          <Check size={12} />
-                          {language === 'ar' ? 'مُحقق' : 'Vérifié'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        {language === 'ar' ? 'رقم الهاتف' : 'Numéro de Téléphone'}
-                      </label>
-                      <input 
-                        type="text" 
-                        defaultValue="+213 555 12 34 56"
+                      <input
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
                         disabled={!isEditingProfile}
-                        className={cn("w-full h-12 px-4 rounded-xl outline-none text-sm font-bold transition-all", isEditingProfile ? "bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:ring-2 focus:ring-algerian-green/20" : "bg-zinc-50 dark:bg-white/5 border border-transparent text-zinc-500 cursor-not-allowed")} 
+                        className={inputClass(isEditingProfile)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        {language === 'ar' ? 'المنصب / الهيئة' : 'Poste / Organisme'}
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "رقم الهاتف" : "Téléphone"}
                       </label>
-                      <input 
-                        type="text" 
-                        defaultValue="Direction Générale"
+                      <input
+                        type="text"
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))}
+                        disabled={!isEditingProfile}
+                        placeholder="+2135XXXXXXXX"
+                        className={inputClass(isEditingProfile)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "رقم التعريف الوطني" : "NIN"}
+                      </label>
+                      <input type="text" value={user.nin || "—"} disabled className={inputClass(false)} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "الدور" : "Rôle"}
+                      </label>
+                      <input
+                        type="text"
+                        value={roleLabel(user.role, language)}
                         disabled
-                        className="w-full h-12 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 border border-transparent outline-none text-sm font-bold text-zinc-500 cursor-not-allowed" 
+                        className={inputClass(false)}
                       />
                     </div>
+                    {user.role === "member_actif" && (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            {language === "ar" ? "تاريخ الميلاد" : "Date de naissance"}
+                          </label>
+                          <input
+                            type="date"
+                            value={profileForm.date_of_birth}
+                            onChange={(e) => setProfileForm((f) => ({ ...f, date_of_birth: e.target.value }))}
+                            disabled={!isEditingProfile}
+                            className={inputClass(isEditingProfile)}
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            {language === "ar" ? "الهدف" : "Objectif"}
+                          </label>
+                          <input
+                            type="text"
+                            value={profileForm.goal}
+                            onChange={(e) => setProfileForm((f) => ({ ...f, goal: e.target.value }))}
+                            disabled={!isEditingProfile}
+                            className={inputClass(isEditingProfile)}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
 
               {activeTab === "security" && (
-                <div className="space-y-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-4">
-                      <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">
-                        {language === 'ar' ? 'تغيير كلمة المرور' : 'Changer le Mot de Passe'}
-                      </h3>
-                      <button 
-                        onClick={() => setIsEditingSecurity(!isEditingSecurity)}
-                        className={cn(
-                          "h-10 px-5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
-                          isEditingSecurity 
-                            ? "bg-algerian-green text-white hover:bg-algerian-green-dark" 
-                            : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/20"
-                        )}
-                      >
-                        {isEditingSecurity 
-                          ? (language === 'ar' ? 'حفظ التعديلات' : 'Enregistrer') 
-                          : (language === 'ar' ? 'تعديل' : 'Modifier')}
-                      </button>
+                <div className="space-y-6">
+                  <div className="border-b border-zinc-200 pb-4 dark:border-white/10">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white">
+                      {language === "ar" ? "تغيير كلمة المرور" : "Changer le mot de passe"}
+                    </h3>
+                    <p className="mt-1 text-xs font-medium text-zinc-500">
+                      {language === "ar"
+                        ? "8 أحرف على الأقل، حرف كبير، رقم ورمز خاص"
+                        : "8 caractères min., une majuscule, un chiffre et un caractère spécial"}
+                    </p>
+                  </div>
+
+                  {passwordMessage && (
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold",
+                        passwordMessage.type === "ok"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "bg-red-500/10 text-red-600 dark:text-red-400"
+                      )}
+                    >
+                      {passwordMessage.type === "ok" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                      {passwordMessage.text}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                          {language === 'ar' ? 'كلمة المرور الحالية' : 'Mot de passe actuel'}
-                        </label>
-                        <input disabled={!isEditingSecurity} type="password" placeholder="••••••••" className={cn("w-full h-12 px-4 rounded-xl outline-none text-sm font-bold transition-all", isEditingSecurity ? "bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:ring-2 focus:ring-algerian-green/20" : "bg-zinc-50 dark:bg-white/5 border border-transparent text-zinc-500 cursor-not-allowed")} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                          {language === 'ar' ? 'كلمة المرور الجديدة' : 'Nouveau mot de passe'}
-                        </label>
-                        <input disabled={!isEditingSecurity} type="password" placeholder="••••••••" className={cn("w-full h-12 px-4 rounded-xl outline-none text-sm font-bold transition-all", isEditingSecurity ? "bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:ring-2 focus:ring-algerian-green/20" : "bg-zinc-50 dark:bg-white/5 border border-transparent text-zinc-500 cursor-not-allowed")} />
-                      </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "كلمة المرور الحالية" : "Mot de passe actuel"}
+                      </label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className={inputClass(true)}
+                        autoComplete="current-password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "كلمة المرور الجديدة" : "Nouveau mot de passe"}
+                      </label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className={inputClass(true)}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === "ar" ? "تأكيد كلمة المرور" : "Confirmer le mot de passe"}
+                      </label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={inputClass(true)}
+                        autoComplete="new-password"
+                      />
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-white/10 pb-4">
-                      {language === 'ar' ? 'المصادقة الثنائية (2FA)' : 'Authentification à Deux Facteurs (2FA)'}
-                    </h3>
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                          <Smartphone size={18} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                            {language === 'ar' ? 'تطبيق المصادقة' : 'Application Authenticator'}
-                          </p>
-                          <p className="text-[11px] font-medium text-zinc-500 mt-0.5">
-                            {language === 'ar' ? 'استخدم Google Authenticator أو Authy' : 'Utilisez Google Authenticator ou Authy'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="relative inline-block w-12 h-6 rounded-full bg-emerald-500 transition-colors cursor-pointer">
-                        <div className={cn(
-                          "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                          dir === 'rtl' ? "left-1 translate-x-6" : "left-1 translate-x-6"
-                        )} />
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleChangePassword}
+                    disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
+                    className="flex h-11 items-center gap-2 rounded-xl bg-algerian-green px-6 text-[11px] font-black uppercase tracking-widest text-white transition-all hover:bg-algerian-green-dark disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {passwordSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {language === "ar" ? "تحديث كلمة المرور" : "Mettre à jour le mot de passe"}
+                  </button>
                 </div>
               )}
 
               {activeTab === "appearance" && (
                 <div className="space-y-8">
                   <div className="space-y-4">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-white/10 pb-4">
-                      {language === 'ar' ? 'اللغة والإقليم' : 'Langue & Région'}
+                    <h3 className="border-b border-zinc-200 pb-4 text-sm font-black uppercase tracking-widest text-zinc-900 dark:border-white/10 dark:text-white">
+                      {language === "ar" ? "اللغة" : "Langue"}
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
-                      <button 
-                        onClick={() => setLanguage('fr')}
-                        className={cn(
-                          "flex items-center justify-between p-4 rounded-2xl border-2 transition-all",
-                          language === 'fr' 
-                            ? "border-algerian-green bg-algerian-green/5" 
-                            : "border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">🇫🇷</span>
-                          <span className="text-sm font-bold text-zinc-900 dark:text-white">Français</span>
-                        </div>
-                        {language === 'fr' && <Check size={18} className="text-algerian-green" />}
-                      </button>
-                      <button 
-                        onClick={() => setLanguage('ar')}
-                        className={cn(
-                          "flex items-center justify-between p-4 rounded-2xl border-2 transition-all",
-                          language === 'ar' 
-                            ? "border-algerian-green bg-algerian-green/5" 
-                            : "border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">🇩🇿</span>
-                          <span className="text-sm font-bold text-zinc-900 dark:text-white">العربية</span>
-                        </div>
-                        {language === 'ar' && <Check size={18} className="text-algerian-green" />}
-                      </button>
+                      {(["fr", "ar"] as const).map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => setLanguage(lang)}
+                          className={cn(
+                            "flex items-center justify-between rounded-2xl border-2 p-4 transition-all",
+                            language === lang
+                              ? "border-algerian-green bg-algerian-green/5"
+                              : "border-zinc-200 hover:bg-zinc-50 dark:border-white/10 dark:hover:bg-white/5"
+                          )}
+                        >
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                            {lang === "fr" ? "Français" : "العربية"}
+                          </span>
+                          {language === lang && <Check size={18} className="text-algerian-green" />}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-white/10 pb-4">
-                      {language === 'ar' ? 'سمة الواجهة' : 'Thème de l\'Interface'}
+                    <h3 className="border-b border-zinc-200 pb-4 text-sm font-black uppercase tracking-widest text-zinc-900 dark:border-white/10 dark:text-white">
+                      {language === "ar" ? "سمة الواجهة" : "Thème de l'interface"}
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <button className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all">
-                        <Sun size={24} className="text-zinc-500" />
-                        <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                          {language === 'ar' ? 'فاتح' : 'Clair'}
-                        </span>
-                      </button>
-                      <button className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-algerian-green bg-algerian-green/5 transition-all">
-                        <Moon size={24} className="text-algerian-green" />
-                        <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                          {language === 'ar' ? 'داكن' : 'Sombre'}
-                        </span>
-                      </button>
-                      <button className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all">
-                        <Laptop size={24} className="text-zinc-500" />
-                        <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                          {language === 'ar' ? 'النظام' : 'Système'}
-                        </span>
-                      </button>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      {(
+                        [
+                          { id: "light" as ThemeMode, icon: Sun, label: language === "ar" ? "فاتح" : "Clair" },
+                          { id: "dark" as ThemeMode, icon: Moon, label: language === "ar" ? "داكن" : "Sombre" },
+                          { id: "system" as ThemeMode, icon: Laptop, label: language === "ar" ? "النظام" : "Système" },
+                        ] as const
+                      ).map(({ id, icon: Icon, label }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setTheme(id)}
+                          className={cn(
+                            "flex flex-col items-center gap-3 rounded-2xl border-2 p-4 transition-all",
+                            theme === id
+                              ? "border-algerian-green bg-algerian-green/5"
+                              : "border-zinc-200 hover:bg-zinc-50 dark:border-white/10 dark:hover:bg-white/5"
+                          )}
+                        >
+                          <Icon size={24} className={theme === id ? "text-algerian-green" : "text-zinc-500"} />
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white">{label}</span>
+                          {theme === id && <Check size={16} className="text-algerian-green" />}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
               )}
 
               {activeTab === "notifications" && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all cursor-pointer">
-                    <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                        {language === 'ar' ? 'تنبيهات المحاضر (PV)' : 'Alertes des PVs'}
-                      </p>
-                      <p className="text-[11px] font-medium text-zinc-500 mt-1">
-                        {language === 'ar' ? 'إشعارات عند اكتشاف تناقض في محضر.' : 'Notifications lors de la détection de discordance dans un PV.'}
-                      </p>
-                    </div>
-                    <div className="relative inline-block w-12 h-6 rounded-full bg-emerald-500">
-                      <div className={cn(
-                        "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                        dir === 'rtl' ? "left-1 translate-x-6" : "left-1 translate-x-6"
-                      )} />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all cursor-pointer">
-                    <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                        {language === 'ar' ? 'التقارير اليومية' : 'Rapports Quotidiens'}
-                      </p>
-                      <p className="text-[11px] font-medium text-zinc-500 mt-1">
-                        {language === 'ar' ? 'ملخص يومي للمشاركة ونشاط النظام.' : 'Résumé quotidien de la participation et de l\'activité système.'}
-                      </p>
-                    </div>
-                    <div className="relative inline-block w-12 h-6 rounded-full bg-zinc-300 dark:bg-white/10">
-                      <div className={cn(
-                        "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                        dir === 'rtl' ? "right-1" : "left-1"
-                      )} />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all cursor-pointer">
-                    <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                        {language === 'ar' ? 'تنبيهات الأمان' : 'Alertes de Sécurité'}
-                      </p>
-                      <p className="text-[11px] font-medium text-zinc-500 mt-1">
-                        {language === 'ar' ? 'محاولات تسجيل دخول مشبوهة وتغييرات في الأذونات.' : 'Tentatives de connexion suspectes et changements de permissions.'}
-                      </p>
-                    </div>
-                    <div className="relative inline-block w-12 h-6 rounded-full bg-emerald-500">
-                      <div className={cn(
-                        "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                        dir === 'rtl' ? "left-1 translate-x-6" : "left-1 translate-x-6"
-                      )} />
-                    </div>
-                  </div>
-                </div>
+                <p className="text-sm font-medium text-zinc-500">
+                  {language === "ar"
+                    ? "إعدادات الإشعارات ستكون متاحة قريباً."
+                    : "Les préférences de notifications seront disponibles prochainement."}
+                </p>
               )}
             </motion.div>
           </AnimatePresence>

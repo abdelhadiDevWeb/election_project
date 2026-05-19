@@ -21,10 +21,10 @@ export interface ListParams {
 }
 
 // ── Auth ────────────────────────────────────────────────────────
+export type AdminRole = "super_admin" | "admin_wilaya" | "admin_commun";
+
 export type UserRole =
-  | "super_admin"
-  | "admin_wilaya"
-  | "admin_commun"
+  | AdminRole
   | "member_actif"
   | "role_election_day"
   | "citizen";
@@ -39,7 +39,10 @@ export interface AuthUser {
   role: UserRole;
   wilaya_id?: string;
   commune_id?: string;
+  party_id?: string;
   status?: string;
+  date_of_birth?: string;
+  goal?: string;
 }
 
 export interface LoginRequest {
@@ -138,6 +141,8 @@ export interface ICandidat {
   date_of_birth: string;
   party: string | IParty;
   wilaya: string | IWilaya;
+  commune?: string | ICommune;
+  created_by?: string;
   is_favorite: boolean;
   result: number;
   createdAt?: string;
@@ -145,42 +150,16 @@ export interface ICandidat {
 }
 
 // ── User Administration ─────────────────────────────────────────
-export interface ISuperAdmin {
+export interface IAdmin {
   id: string;
   _id: string;
   full_name: string;
   email: string;
   phone: string;
   nin: string;
-  status: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface IAdminWilaya {
-  id: string;
-  _id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  nin: string;
-  date_of_birth?: string;
-  wilaya: string | IWilaya;
-  status: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface IAdminCommun {
-  id: string;
-  _id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  nin: string;
-  date_of_birth?: string;
-  wilaya: string | IWilaya;
-  commune: string | ICommune;
+  role: AdminRole;
+  wilaya?: string | IWilaya;
+  commune?: string | ICommune;
   status: string;
   createdAt?: string;
   updatedAt?: string;

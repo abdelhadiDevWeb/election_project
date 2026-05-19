@@ -12,6 +12,7 @@ import {
   EyeOff,
   AlertCircle
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
@@ -153,8 +154,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-4 text-center">
-            <button className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest">
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <Link
+              href="/register"
+              className="w-full h-[44px] rounded-[12px] border border-white/10 bg-white/[0.02] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-white/[0.05] hover:border-emerald-500/30 transition-all flex items-center justify-center"
+            >
+              Create Super Admin Account
+            </Link>
+            <button
+              type="button"
+              className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest"
+            >
               Forgot Access Token?
             </button>
           </div>
