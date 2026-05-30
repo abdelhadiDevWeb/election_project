@@ -3,7 +3,24 @@ import { ResultCenter } from "../result-center/result-center.model";
 import * as crud from "../common/crud.helpers";
 import mongoose from "mongoose";
 
-export async function submitDeskResult(data: any) { return crud.createDoc(ResultDesk, data); }
+export async function submitDeskResult(data: any) {
+  const existing = await ResultDesk.findOne({
+    desk: data.desk,
+    party: data.party,
+    candidat: data.candidat,
+  });
+  if (existing) {
+    if (data.total !== undefined) existing.total = data.total;
+    if (data.image) {
+      existing.image = data.image;
+      existing.image_mimetype = data.image_mimetype;
+    }
+    if (data.owner) existing.owner = data.owner;
+    existing.status = "pending";
+    return await existing.save();
+  }
+  return crud.createDoc(ResultDesk, data);
+}
 
 export async function findAllDeskResults(query: any) {
   const f: any = {};

@@ -26,7 +26,7 @@ export function useSocket() {
   const [events, setEvents] = useState<SocketEvent[]>([]);
 
   useEffect(() => {
-    const token = getAccessToken();
+    const token = getAccessToken() || localStorage.getItem("anie_token");
     if (!token) return;
 
     const socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4005", {

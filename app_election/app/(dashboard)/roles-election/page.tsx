@@ -157,6 +157,7 @@ export default function RolesElection() {
     centersData,
     communesData,
     wilayasData,
+    desksData,
     mutation,
   } = useData();
   const { t, language, dir } = useLanguage();
@@ -285,8 +286,21 @@ export default function RolesElection() {
     if (user?.wilaya_id) {
       return rows.filter((c) => String(c.wilaya_id) === String(user.wilaya_id));
     }
-    return rows;
   }, [centersData, createMode, pickerCommuneId, user?.commune_id, user?.wilaya_id]);
+
+  const desksForMission = useMemo(() => {
+    const rows = (desksData || []) as any[];
+    if (createMode === "existing" && pickerCommuneId) {
+      return rows.filter((d) => String(d.commune_id) === String(pickerCommuneId));
+    }
+    if (user?.commune_id) {
+      return rows.filter((d) => String(d.commune_id) === String(user.commune_id));
+    }
+    if (user?.wilaya_id) {
+      return rows.filter((d) => String(d.wilaya_id) === String(user.wilaya_id));
+    }
+    return rows;
+  }, [desksData, createMode, pickerCommuneId, user?.commune_id, user?.wilaya_id]);
 
   const generatePassword = () => {
     const n = Math.floor(1000 + Math.random() * 9000);
@@ -375,7 +389,7 @@ export default function RolesElection() {
       const res = await api.get<{ ok: boolean; data: IRoleElectionDay & { password_plain?: string } }>(
         `/roles-election-day/${apiId}`
       );
-      const r = (res as { data?: IRoleElectionDay & { password_plain?: string } }).data ?? res;
+      const r = ((res as any).data ?? res) as (IRoleElectionDay & { password_plain?: string });
       const role = API_ROLE_TO_FORM[r.role] || fallbackRole;
       const time = r.assigned_time || fallbackTime;
       const date = toDateInputValue(r.assigned_date) || fallbackDate;
@@ -389,13 +403,12 @@ export default function RolesElection() {
         birthday,
         role,
         center:
-          r.location ||
-          (typeof r.center === "object" && r.center ? (r.center as { name?: string }).name : "") ||
-          item.location ||
-          String(item.center || ""),
+          r.center
+            ? String(typeof r.center === "object" && (r.center as any)._id ? (r.center as any)._id : r.center)
+            : item.center || "",
         desk:
-          r.desk && typeof r.desk === "object"
-            ? String((r.desk as { desk_number?: number }).desk_number || "")
+          r.desk
+            ? String(typeof r.desk === "object" && (r.desk as any)._id ? (r.desk as any)._id : r.desk)
             : item.desk || "",
         time,
         date,
@@ -579,6 +592,9 @@ export default function RolesElection() {
         location: locationText,
       };
       if (centerId) body.center = centerId;
+      if (newUser.role === "obs_desk" && newUser.desk) {
+        body.desk = newUser.desk;
+      }
 
       if (editingItem) {
         const apiId = editingItem._id || editingItem.id;
@@ -835,7 +851,7 @@ export default function RolesElection() {
                               <button
                                 key={p.key}
                                 type="button"
-                                disabled={isSubmitting || already}
+                                disabled={isSubmitting || !!already}
                                 onClick={() => applyPersonToForm(p)}
                                 className={cn(
                                   "flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all",
@@ -949,24 +965,73 @@ export default function RolesElection() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'تعيين المركز' : 'Affectation Centre'}</label>
-                <input
-                  required
-                  type="text"
-                  list="center-suggestions"
-                  placeholder={language === 'ar' ? 'اكتب اسم المركز أو المكان' : 'Nom du centre ou lieu de mission'}
-                  disabled={isSubmitting}
-                  className="w-full h-14 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold disabled:opacity-60"
-                  value={newUser.center}
-                  onChange={(e) => setNewUser({ ...newUser, center: e.target.value })}
-                />
-                <datalist id="center-suggestions">
-                  {centersForMission.map((c) => {
-                    const id = String(c.id || c._id || "");
-                    const label = [c.name, c.location].filter(Boolean).join(" — ");
-                    return <option key={id} value={String(c.name || label)} />;
-                  })}
-                </datalist>
+                {newUser.role === "obs_center" ? (
+                  <>
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                      {language === 'ar' ? 'تعيين المركز' : 'Affectation Centre'}
+                    </label>
+                    <select
+                      required
+                      disabled={isSubmitting}
+                      className="w-full h-14 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold disabled:opacity-60"
+                      value={newUser.center}
+                      onChange={(e) => setNewUser({ ...newUser, center: e.target.value, desk: "" })}
+                    >
+                      <option value="">{language === 'ar' ? 'اختر مركزاً…' : 'Choisir un centre…'}</option>
+                      {centersForMission?.map((c) => {
+                        const id = String(c.id || c._id || "");
+                        const name = String(c.name || "");
+                        return (
+                          <option key={id} value={name}>
+                            {name}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                      {language === 'ar' ? 'تعيين المكتب' : 'Affectation bureau'}
+                    </label>
+                    <select
+                      required
+                      disabled={isSubmitting}
+                      className="w-full h-14 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold disabled:opacity-60"
+                      value={newUser.desk}
+                      onChange={(e) => {
+                        const deskId = e.target.value;
+                        const desk = desksForMission.find((d: any) => String(d.id || d._id) === deskId);
+                        if (desk) {
+                          setNewUser({
+                            ...newUser,
+                            desk: deskId,
+                            center: desk.center_id || desk.center || ""
+                          });
+                        } else {
+                          setNewUser({
+                            ...newUser,
+                            desk: "",
+                            center: ""
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">{language === 'ar' ? 'اختر مكتباً…' : 'Choisir un bureau…'}</option>
+                      {desksForMission?.map((d) => {
+                        const id = String(d.id || d._id || "");
+                        const label = language === 'ar'
+                          ? `مكتب ${d.num_desk} (${d.center})`
+                          : `Bureau ${d.num_desk} (${d.center})`;
+                        return (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </>
+                )}
               </div>
             </div>
 

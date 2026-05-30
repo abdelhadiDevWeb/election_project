@@ -53,6 +53,14 @@ import * as messageVal from "../modules/message/message.validator";
 import * as notifCtrl from "../modules/notification/notification.controller";
 import * as notifVal from "../modules/notification/notification.validator";
 
+// ── Models for Inline Observer Routes ──
+import { Party } from "../modules/parties/parties.model";
+import { Candidat } from "../modules/candidats/candidats.model";
+import { Desk } from "../modules/desk/desk.model";
+import { Center } from "../modules/center/center.model";
+import { ResultDesk } from "../modules/result-desk/result-desk.model";
+import { RoleElectionDay } from "../modules/role-election-day/role-election-day.model";
+
 export const apiRouter = Router();
 
 // ────────────────────────── Health ──────────────────────────
@@ -170,6 +178,92 @@ apiRouter.get("/results/aggregate/center/:centerId", requireAuth, resultDeskCtrl
 apiRouter.get("/results/aggregate/wilaya/:wilayaId", requireAuth, resultDeskCtrl.aggregateByWilaya);
 apiRouter.get("/results/aggregate/national", requireAuth, resultDeskCtrl.aggregateNational);
 
+// ────────────────────────── Observer (Election Day) ──────────────────
+apiRouter.get("/observer/my-desk", requireAuth, requireRoles("role_election_day"), async (req, res) => {
+  try {
+    const roleUser = await RoleElectionDay.findById(req.user?.sub).populate("center desk").lean();
+    if (!roleUser) {
+      return res.status(404).json({ ok: false, message: "Observer not found" });
+    }
+    res.json({ ok: true, data: roleUser });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+apiRouter.get("/observer/my-center", requireAuth, requireRoles("role_election_day"), async (req, res) => {
+  try {
+    const centerId = req.user?.center_id;
+    if (!centerId) {
+      return res.status(400).json({ ok: false, message: "No center assigned to this observer" });
+    }
+    const center = await Center.findById(centerId).lean();
+    if (!center) {
+      return res.status(404).json({ ok: false, message: "Center not found" });
+    }
+    const desks = await Desk.find({ center: centerId }).lean();
+    const totalDesks = desks.length;
+    const maleDesksCount = desks.filter((d: any) => d.type === "male").length;
+    const femaleDesksCount = desks.filter((d: any) => d.type === "female").length;
+
+    res.json({
+      ok: true,
+      data: {
+        center,
+        desks,
+        stats: {
+          totalDesks,
+          maleDesksCount,
+          femaleDesksCount,
+        }
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+apiRouter.get("/observer/parties-candidats", requireAuth, requireRoles("role_election_day"), async (req, res) => {
+  try {
+    const wilayaId = req.user?.wilaya_id;
+    if (!wilayaId) {
+      return res.status(400).json({ ok: false, message: "No wilaya associated with this observer" });
+    }
+    const parties = await Party.find({ wilaya: wilayaId }).lean();
+    const candidats = await Candidat.find({ wilaya: wilayaId }).lean();
+    
+    const data = parties.map((p: any) => {
+      const partyCandidats = candidats.filter((c: any) => String(c.party) === String(p._id)).map((c: any) => ({
+        ...c,
+        id: String(c._id)
+      }));
+      return {
+        ...p,
+        id: String(p._id),
+        candidats: partyCandidats
+      };
+    });
+    res.json({ ok: true, data });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+apiRouter.get("/observer/my-results", requireAuth, requireRoles("role_election_day"), async (req, res) => {
+  try {
+    const query: any = {};
+    if (req.user?.desk_id) {
+      query.desk = req.user.desk_id;
+    } else {
+      query.owner = req.user?.sub;
+    }
+    const results = await ResultDesk.find(query).lean();
+    res.json({ ok: true, data: results });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
 // ────────────────────────── Messages ────────────────────────
 apiRouter.post("/messages", requireAuth, writeLimiter, uploadMessageFiles.fields([{ name: "images", maxCount: 5 }, { name: "video", maxCount: 1 }, { name: "pdf", maxCount: 1 }]), validate(messageVal.sendSchema), messageCtrl.send);
 apiRouter.get("/messages", requireAuth, validate(messageVal.listSchema), messageCtrl.list);
@@ -181,3 +275,6 @@ apiRouter.get("/notifications", requireAuth, validate(notifVal.listSchema), noti
 apiRouter.put("/notifications/:id/read", requireAuth, notifCtrl.markRead);
 apiRouter.put("/notifications/read-all", requireAuth, notifCtrl.markAllRead);
 apiRouter.post("/notifications", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(notifVal.createSchema), notifCtrl.create);
+apiRouter.post("/notifications/reclamation", requireAuth, requireRoles("role_election_day"), writeLimiter, validate(notifVal.createReclamationSchema), notifCtrl.createReclamation);
+apiRouter.get("/notifications/reclamation", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), notifCtrl.listReclamations);
+

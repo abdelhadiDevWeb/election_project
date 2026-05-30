@@ -11,6 +11,7 @@ async function centerIdsForUser(user: JwtUser | undefined): Promise<string[] | n
   const filter: Record<string, unknown> = {};
   if (user.role === "admin_wilaya" && user.wilaya_id) filter.wilaya = user.wilaya_id;
   else if (user.role === "admin_commun" && user.commune_id) filter.commune = user.commune_id;
+  else if (user.role === "role_election_day" && user.center_id) return [user.center_id];
   else return [];
   const centers = await Center.find(filter).select("_id").lean();
   return centers.map((c) => String(c._id));

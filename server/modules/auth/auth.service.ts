@@ -3,9 +3,12 @@ import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
 import { Admin, type AdminRole } from "../admin/admin.model";
 import { MemberActif } from "../member-actif/member-actif.model";
+import { RoleElectionDay } from "../role-election-day/role-election-day.model";
 import { getRedis } from "../../db/redis";
 import type { UserRole, JwtUser } from "../../middleware/auth";
 import crypto from "node:crypto";
+
+const ALLOWED_OBSERVER_ROLES = ["observateur_bureau", "observateur_centre"];
 
 const BCRYPT_ROUNDS = 12;
 const ACCESS_EXPIRES = "7d";
@@ -40,12 +43,22 @@ export function toAuthUser(user: Record<string, unknown>) {
       ? new Date(user.date_of_birth as string | Date).toISOString().slice(0, 10)
       : undefined,
     goal: user.goal as string | undefined,
+    election_role: (user.election_role || user.electionRole) as string | undefined,
+    center_id: user.center ? refId(user.center) : (user.center_id as string | undefined),
+    desk_id: user.desk ? refId(user.desk) : (user.desk_id as string | undefined),
   };
 }
 
 function signAccessToken(user: JwtUser): string {
   return jwt.sign(
-    { role: user.role, wilaya_id: user.wilaya_id, commune_id: user.commune_id },
+    {
+      role: user.role,
+      wilaya_id: user.wilaya_id,
+      commune_id: user.commune_id,
+      election_role: user.election_role,
+      center_id: user.center_id,
+      desk_id: user.desk_id,
+    },
     env.jwt.accessSecret,
     { subject: user.sub, issuer: env.jwt.issuer, audience: env.jwt.audience, expiresIn: ACCESS_EXPIRES }
   );
@@ -95,11 +108,25 @@ export async function findMemberActifById(id: string) {
   return toAuthUser({ ...safe, role: "member_actif", status: "active" } as unknown as Record<string, unknown>);
 }
 
-/** Resolve dashboard user from Admin or MemberActif */
+export async function findRoleElectionDayById(id: string) {
+  const user = await RoleElectionDay.findById(id).populate("wilaya commune center desk").lean();
+  if (!user) return null;
+  const { password: _pw, ...safe } = user as typeof user & { password?: string };
+  return {
+    ...toAuthUser({ ...safe, role: "role_election_day", status: "active" } as unknown as Record<string, unknown>),
+    election_role: user.role,
+    center_id: user.center ? String(typeof user.center === "object" && "_id" in user.center ? user.center._id : user.center) : undefined,
+    desk_id: user.desk ? String(typeof user.desk === "object" && "_id" in user.desk ? user.desk._id : user.desk) : undefined,
+  };
+}
+
+/** Resolve dashboard user from Admin, MemberActif, or RoleElectionDay */
 export async function findUserById(id: string) {
   const admin = await findAdminById(id);
   if (admin) return admin;
-  return findMemberActifById(id);
+  const member = await findMemberActifById(id);
+  if (member) return member;
+  return findRoleElectionDayById(id);
 }
 
 async function issueSession(jwtUser: JwtUser, safeUser: Record<string, unknown>) {
@@ -173,36 +200,82 @@ export async function login(emailInput: string, passwordInput: string, ip: strin
     .populate("wilaya commune party")
     .lean();
 
-  if (!member) {
+  if (member) {
+    if (await checkLockout(`acct:${member._id}`)) {
+      throw Object.assign(new Error("Account locked. Try again later."), { status: 429 });
+    }
+
+    const matchMember = await bcrypt.compare(passwordInput, member.password);
+    if (!matchMember) {
+      await recordFailedAttempt(`ip:${ip}`);
+      await recordFailedAttempt(`acct:${member._id}`);
+      throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+    }
+
+    await clearAttempts(`ip:${ip}`);
+    await clearAttempts(`acct:${member._id}`);
+
+    const jwtUser: JwtUser = {
+      sub: String(member._id),
+      role: "member_actif",
+      wilaya_id: refId(member.wilaya),
+      commune_id: refId(member.commune),
+    };
+
+    const { password: _pw, ...safeMember } = member;
+    return await issueSession(jwtUser, {
+      ...safeMember,
+      role: "member_actif",
+      status: "active",
+    } as unknown as Record<string, unknown>);
+  }
+
+  // ── Login: RoleElectionDay (observateur_bureau / observateur_centre) ──
+  const roleUser = await RoleElectionDay.findOne({ email: emailNorm })
+    .select("+password")
+    .populate("wilaya commune center desk")
+    .lean();
+
+  if (!roleUser) {
     await recordFailedAttempt(`ip:${ip}`);
     throw Object.assign(new Error("Invalid email or password"), { status: 401 });
   }
 
-  if (await checkLockout(`acct:${member._id}`)) {
+  if (!ALLOWED_OBSERVER_ROLES.includes(roleUser.role)) {
+    throw Object.assign(new Error("Access denied for this account type"), { status: 403 });
+  }
+
+  if (await checkLockout(`acct:${roleUser._id}`)) {
     throw Object.assign(new Error("Account locked. Try again later."), { status: 429 });
   }
 
-  const matchMember = await bcrypt.compare(passwordInput, member.password);
-  if (!matchMember) {
+  const matchRole = await bcrypt.compare(passwordInput, roleUser.password);
+  if (!matchRole) {
     await recordFailedAttempt(`ip:${ip}`);
-    await recordFailedAttempt(`acct:${member._id}`);
+    await recordFailedAttempt(`acct:${roleUser._id}`);
     throw Object.assign(new Error("Invalid email or password"), { status: 401 });
   }
 
   await clearAttempts(`ip:${ip}`);
-  await clearAttempts(`acct:${member._id}`);
+  await clearAttempts(`acct:${roleUser._id}`);
 
-  const jwtUser: JwtUser = {
-    sub: String(member._id),
-    role: "member_actif",
-    wilaya_id: refId(member.wilaya),
-    commune_id: refId(member.commune),
+  const jwtUserRole: JwtUser = {
+    sub: String(roleUser._id),
+    role: "role_election_day",
+    wilaya_id: refId(roleUser.wilaya),
+    commune_id: refId(roleUser.commune),
+    election_role: roleUser.role,
+    center_id: refId(roleUser.center),
+    desk_id: refId(roleUser.desk),
   };
 
-  const { password: _pw, ...safeMember } = member;
-  return await issueSession(jwtUser, {
-    ...safeMember,
-    role: "member_actif",
+  const { password: _pwRole, ...safeRoleUser } = roleUser;
+  return await issueSession(jwtUserRole, {
+    ...safeRoleUser,
+    role: "role_election_day",
+    election_role: roleUser.role,
+    center_id: refId(roleUser.center),
+    desk_id: refId(roleUser.desk),
     status: "active",
   } as unknown as Record<string, unknown>);
 }
@@ -265,15 +338,28 @@ export async function refreshTokens(oldRefreshToken: string) {
     };
   } else {
     const memberDoc = await MemberActif.findById(sub).lean();
-    if (!memberDoc) {
-      throw Object.assign(new Error("User not found"), { status: 401 });
+    if (memberDoc) {
+      jwtUser = {
+        sub,
+        role: "member_actif",
+        wilaya_id: memberDoc.wilaya ? String(memberDoc.wilaya) : undefined,
+        commune_id: memberDoc.commune ? String(memberDoc.commune) : undefined,
+      };
+    } else {
+      const roleDoc = await RoleElectionDay.findById(sub).lean();
+      if (!roleDoc) {
+        throw Object.assign(new Error("User not found"), { status: 401 });
+      }
+      jwtUser = {
+        sub,
+        role: "role_election_day",
+        wilaya_id: roleDoc.wilaya ? String(roleDoc.wilaya) : undefined,
+        commune_id: roleDoc.commune ? String(roleDoc.commune) : undefined,
+        election_role: roleDoc.role,
+        center_id: roleDoc.center ? String(roleDoc.center) : undefined,
+        desk_id: roleDoc.desk ? String(roleDoc.desk) : undefined,
+      };
     }
-    jwtUser = {
-      sub,
-      role: "member_actif",
-      wilaya_id: memberDoc.wilaya ? String(memberDoc.wilaya) : undefined,
-      commune_id: memberDoc.commune ? String(memberDoc.commune) : undefined,
-    };
   }
 
   const accessToken = signAccessToken(jwtUser);

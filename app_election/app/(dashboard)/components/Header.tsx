@@ -11,6 +11,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useTheme } from "@/app/context/ThemeContext";
+import { useSocket } from "@/lib/hooks/useSocket";
 
 interface HeaderProps {
   toggleSidebar?: () => void;
@@ -18,6 +19,7 @@ interface HeaderProps {
 
 export default function Header({ toggleSidebar }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const pathname = usePathname();
@@ -25,8 +27,15 @@ export default function Header({ toggleSidebar }: HeaderProps) {
   const { electionScope, setElectionScope } = useData();
   const { t, language } = useLanguage();
   const { user, logout } = useAuth();
-  const { data: notifications } = useNotifications({ read: false, limit: 10 });
+  const { data: notifications, refetch: refetchNotifications } = useNotifications({ is_read: "false", limit: 10 });
+  const { events } = useSocket();
   const unreadCount = Array.isArray(notifications) ? notifications.length : 0;
+
+  useEffect(() => {
+    if (events.length > 0) {
+      refetchNotifications();
+    }
+  }, [events, refetchNotifications]);
 
   const toggleTheme = () => {
     setTheme(isDark ? "light" : "dark");
@@ -108,14 +117,58 @@ export default function Header({ toggleSidebar }: HeaderProps) {
             {isDark ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-indigo-600" />}
           </button>
 
-          <button className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-white/10 text-zinc-500 relative transition-all">
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-algerian-red border-2 border-white dark:border-[#09090b] text-[8px] font-black text-white flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-white/10 text-zinc-500 relative transition-all"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-algerian-red border-2 border-white dark:border-[#09090b] text-[8px] font-black text-white flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            {showNotifications && (
+              <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-white/10 shadow-xl p-2 z-50">
+                <div className="px-3 py-2 border-b border-zinc-100 dark:border-white/5 mb-1 flex justify-between items-center">
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">{language === "ar" ? "الإشعارات" : "Notifications"}</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                  {!notifications || notifications.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-zinc-500">
+                      {language === "ar" ? "لا توجد إشعارات" : "Aucune notification"}
+                    </div>
+                  ) : (
+                    notifications.map((notif: any, index: number) => (
+                      <button 
+                        key={notif._id || notif.id || index} 
+                        onClick={() => {
+                          setShowNotifications(false);
+                          router.push(`/notifications?id=${notif._id || notif.id}`);
+                        }}
+                        className="w-full text-left p-3 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-lg border-b border-zinc-50 dark:border-white/5 last:border-0 transition-colors"
+                      >
+                        <p className="text-xs font-bold text-zinc-900 dark:text-white mb-1">{notif.title}</p>
+                        <p className="text-xs text-zinc-500 line-clamp-2">{notif.body}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+                <div className="pt-2 mt-2 border-t border-zinc-100 dark:border-white/5">
+                  <button
+                    onClick={() => {
+                      setShowNotifications(false);
+                      router.push('/notifications');
+                    }}
+                    className="w-full text-center py-2 text-xs font-bold text-algerian-green hover:text-algerian-green-light transition-colors"
+                  >
+                    {language === "ar" ? "عرض كل الإشعارات" : "Voir toutes les notifications"}
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </div>
 
         <div className="hidden sm:block h-8 w-[1px] bg-zinc-200 dark:bg-white/10 mx-1"></div>

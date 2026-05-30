@@ -277,7 +277,7 @@ export interface INotification {
   title: string;
   body: string;
   type: string;
-  read: boolean;
+  is_read: boolean;
   createdAt?: string;
 }
 
