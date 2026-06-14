@@ -1,4 +1,4 @@
-# ANIE Login Page — Minimal Premium Design
+# PVP Login Page — Minimal Premium Design
 
 ---
 
@@ -41,7 +41,7 @@ Use a centered layout.
 ---------------------------------
 |                               |
 |                               |
-|        ANIE LOGO              |
+|        PVP LOGO              |
 |                               |
 |      Login Glass Card         |
 |                               |
@@ -105,7 +105,7 @@ margin-bottom: 32px;
 Main Title:
 
 ```txt
-ANIE Electoral Management System
+PVP Electoral Management System
 ```
 
 Style:

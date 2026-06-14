@@ -67,7 +67,7 @@ export default function DashboardLayout({
   return (
     <SocketProvider>
       <DataProvider>
-        <div className="flex min-h-screen relative w-full overflow-x-hidden">
+        <div className="flex min-h-screen relative w-full overflow-x-clip">
           <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
           <div
             className={cn(

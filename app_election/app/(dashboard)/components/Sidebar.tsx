@@ -14,6 +14,7 @@ import {
   ChevronRight,
   LogOut,
   UsersRound,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -77,6 +78,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps = {}) {
           user?.role !== "admin_commun" && { name: t("nav.entities"), href: "/entites-politiques", icon: Flag },
           { name: t("nav.validation"), href: "/validation", icon: CheckCircle },
           { name: t("nav.roles"), href: "/roles-election", icon: Calendar },
+          { name: language === "ar" ? "النتائج والـ OCR" : "Résultats & OCR", href: "/resultats", icon: BarChart3 },
         ].filter(Boolean) as { name: string; href: string; icon: any }[],
       },
     ];
@@ -104,41 +106,20 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps = {}) {
           : `left-0 border-r border-white/5 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`
       )}>
       {/* Brand Header */}
-      <div className="flex h-16 items-center px-4 mb-6 mt-1">
-        <div className="flex items-center gap-3.5">
-          <div className="h-12 w-12 rounded-2xl bg-algerian-green flex items-center justify-center text-white glow-emerald">
-            <AlgeriaMapIcon className="w-7 h-7" />
-          </div>
+      <div className="flex min-h-[5rem] py-2 items-center px-4 mb-2 mt-1">
+        <Link href="/" className="flex items-center gap-3.5 hover:opacity-80 transition-opacity cursor-pointer">
+          <img src="/Parti_Voix_du_peuple.png" alt="PVP Logo" className="h-28 w-28 object-contain shrink-0 scale-110" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-2xl font-black tracking-tighter text-algerian-green dark:text-white leading-none">ANIE</span>
+            <span className="text-2xl font-black tracking-tighter text-algerian-green dark:text-white leading-none">PVP</span>
             <span className="text-[11px] uppercase tracking-[0.3em] text-zinc-500 font-bold">{language === 'ar' ? 'الجزائر' : 'Algérie'}</span>
           </div>
-        </div>
+        </Link>
       </div>
 
-      {/* Command Search */}
-      <div className="px-4 mb-8">
-        <div className="relative group">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500 group-hover:text-algerian-green transition-colors" size={16} />
-          <input 
-            type="text" 
-            placeholder={t("common.search")} 
-            className={cn(
-              "w-full h-10 pr-4 bg-zinc-100/50 dark:bg-white/5 border-none rounded-xl text-xs font-medium focus:ring-1 focus:ring-algerian-green/50 transition-all",
-              dir === 'rtl' ? 'pr-10 pl-4' : 'pl-10 pr-4'
-            )}
-          />
-          <div className={cn(
-            "absolute top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-white/10 text-[10px] font-bold text-zinc-400",
-            dir === 'rtl' ? 'left-3' : 'right-3'
-          )}>
-            ⌘K
-          </div>
-        </div>
-      </div>
+
       
       {/* Navigation Groups */}
-      <nav className="flex-1 space-y-8 px-2 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 flex flex-col pb-2 space-y-4 px-2 overflow-y-auto custom-scrollbar">
         {navigationGroups.map((group) => (
           <div key={group.title} className="space-y-2">
             <div className="px-4 text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400 dark:text-zinc-500">
@@ -153,7 +134,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps = {}) {
                       href={item.href}
                       onClick={() => setIsOpen?.(false)}
                       className={cn(
-                        "group relative flex items-center rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300",
+                        "group relative flex items-center rounded-xl px-4 py-2 text-sm font-bold transition-all duration-300",
                         isActive
                           ? "text-algerian-green dark:text-white"
                           : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"

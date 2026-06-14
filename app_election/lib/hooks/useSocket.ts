@@ -20,13 +20,58 @@ export interface SocketEvent {
   timestamp: number;
 }
 
-export function useSocket() {
+export function useSocket(options?: { playSound?: boolean }) {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [events, setEvents] = useState<SocketEvent[]>([]);
 
+  const playAudioNotification = useCallback((type: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const audioCtx = new AudioContextClass();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      if (type === "reclamation") {
+        // 3-second alert sound (pulsating siren)
+        oscillator.type = "sawtooth";
+        oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+        oscillator.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.5);
+        oscillator.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 1.0);
+        oscillator.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 1.5);
+        oscillator.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 2.0);
+        oscillator.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 2.5);
+        oscillator.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 3.0);
+        
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3.0);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 3.0);
+      } else {
+        // 1-second simple beep
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+        
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 1.0);
+      }
+    } catch (err) {
+      console.error("Audio playback failed", err);
+    }
+  }, []);
+
   useEffect(() => {
-    const token = getAccessToken() || localStorage.getItem("anie_token");
+    const token = getAccessToken() || localStorage.getItem("pvp_token");
     if (!token) return;
 
     const socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4005", {
@@ -52,6 +97,10 @@ export function useSocket() {
 
     // Listen for real-time notification events
     socket.on("notification", (data: any) => {
+      if (options?.playSound) {
+        playAudioNotification(data.type);
+      }
+      
       const event: SocketEvent = {
         id: data._id || data.id || String(Date.now()),
         type: data.type === "alert" ? "warning" : data.type === "error" ? "warning" : "success",

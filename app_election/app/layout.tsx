@@ -16,7 +16,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "ANIE | Système de Gestion Électorale",
+  title: "PVP | Système de Gestion Électorale",
   description: "Plateforme officielle de gestion des élections de l'Autorité Nationale Indépendante des Élections.",
 };
 

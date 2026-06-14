@@ -55,14 +55,14 @@ async function seed() {
   console.log(`Seeded ${wilayaCount} wilayas and ${communeCount} communes.`);
 
   // ── 2. Default super_admin (Admin collection) ─────────────
-  const DEFAULT_EMAIL = "admin@anie.dz";
+  const DEFAULT_EMAIL = "admin@pvp.dz";
   const DEFAULT_PASSWORD = "Admin123!";
 
   const exists = await Admin.findOne({ email: DEFAULT_EMAIL });
   if (!exists) {
     const hashed = await bcrypt.hash(DEFAULT_PASSWORD, 12);
     await Admin.create({
-      full_name: "Super Admin ANIE",
+      full_name: "Super Admin PVP",
       email: DEFAULT_EMAIL,
       password: hashed,
       role: "super_admin",

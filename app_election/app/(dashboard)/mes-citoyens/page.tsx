@@ -425,7 +425,7 @@ export default function MesCitoyensPage() {
           <motion.div key="table" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <DataTable
               title={language === "ar" ? "????? ??????" : "Liste de mes citoyens"}
-              exportFileName="mes-citoyens-anie"
+              exportFileName="mes-citoyens-pvp"
               columns={[
                 { header: language === "ar" ? "?????" : "Nom", accessor: "full_name" },
                 { header: "NIN", accessor: "nin" },

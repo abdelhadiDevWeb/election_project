@@ -209,7 +209,7 @@ function CentreHome() {
         <h1 className="text-3xl lg:text-4xl font-black text-zinc-900 dark:text-white font-plus-jakarta">
           {center?.name || t("nav.overview")}
         </h1>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium truncate w-full">
+        <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium max-w-none">
           {language === "ar"
             ? "نظرة عامة على مركز التصويت الخاص بك: عدد المكاتب والنتائج حسب الأحزاب."
             : "Vue d'ensemble de votre centre de vote : nombre de bureaux et résultats par parti."}

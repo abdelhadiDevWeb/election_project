@@ -20,7 +20,7 @@ const otp = await issueOtp(phone, "test");
 console.log("OTP issue:", otp);
 
 if (otp.ok) {
-  const msg = `ANIE test. Code: ${otp.code}. Valide ${env.otp.expiryMinutes} min.`;
+  const msg = `PVP test. Code: ${otp.code}. Valide ${env.otp.expiryMinutes} min.`;
   const sms = await sendSms(phone, msg);
   console.log("SMS send:", sms);
 }

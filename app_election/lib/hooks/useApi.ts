@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────────
-// Generic data-fetching hooks for the ANIE Electoral System.
+// Generic data-fetching hooks for the PVP Electoral System.
 // Provides useQuery (GET) and useMutation (POST/PUT/DELETE)
 // with loading, error, and refetch capabilities.
 // ────────────────────────────────────────────────────────────────

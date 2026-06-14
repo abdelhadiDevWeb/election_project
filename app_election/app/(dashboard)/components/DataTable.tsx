@@ -40,6 +40,7 @@ interface DataTableProps {
   exportFileName?: string;
   onEdit?: (row: Record<string, unknown>) => void;
   onDelete?: (row: Record<string, unknown>) => void;
+  headerExtra?: React.ReactNode;
 }
 
 export default function DataTable({
@@ -49,6 +50,7 @@ export default function DataTable({
   exportFileName,
   onEdit,
   onDelete,
+  headerExtra,
 }: DataTableProps) {
   const { language, dir } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
@@ -150,13 +152,15 @@ export default function DataTable({
               className="h-11 ps-11 pe-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 text-sm font-medium focus:ring-2 focus:ring-algerian-green/10 w-full md:w-72 transition-all text-start"
             />
           </div>
-          <button
-            type="button"
-            className="h-11 px-4 rounded-xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 flex items-center gap-2 text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all"
-          >
-            <Filter size={16} className="text-zinc-400" />
-            <span>{language === "ar" ? "تصفية" : "Filtres"}</span>
-          </button>
+          {headerExtra || (
+            <button
+              type="button"
+              className="h-11 px-4 rounded-xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 flex items-center gap-2 text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all"
+            >
+              <Filter size={16} className="text-zinc-400" />
+              <span>{language === "ar" ? "تصفية" : "Filtres"}</span>
+            </button>
+          )}
 
           <div className="relative" ref={exportRef}>
             <button

@@ -63,8 +63,9 @@ export function initSocket(server: HttpServer): Server {
   io.on("connection", (socket) => {
     const user = (socket as any).user as JwtUser;
 
-    // Auto-join user to their personal room and scope rooms
+    // Auto-join user to their personal room, role, and scope rooms
     socket.join(`user:${user.sub}`);
+    if (user.role) socket.join(user.role);
     if (user.wilaya_id) socket.join(`wilaya:${user.wilaya_id}`);
     if (user.commune_id) socket.join(`commune:${user.commune_id}`);
 

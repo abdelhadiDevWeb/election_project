@@ -63,4 +63,4 @@ roleElectionDaySchema.index({ desk: 1, role: 1 });
 roleElectionDaySchema.index({ wilaya: 1, role: 1 });
 roleElectionDaySchema.index({ center: 1 });
 
-export const RoleElectionDay = mongoose.model<IRoleElectionDay>("RoleElectionDay", roleElectionDaySchema);
+export const RoleElectionDay = mongoose.model<IRoleElectionDay>("RoleElectionDay", roleElectionDaySchema, "role election days");

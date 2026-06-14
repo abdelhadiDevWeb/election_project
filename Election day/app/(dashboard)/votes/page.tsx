@@ -389,12 +389,26 @@ export default function VotesPage() {
                     <td className="px-6 py-4 text-end">
                       <span className={cn(
                         "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
-                        row.status === "validated" 
+                        row.status === "verified" || row.status === "validated"
                           ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : row.status === "mismatch" || row.status === "rejected"
+                          ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                          : row.status === "ocr_processing"
+                          ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
                           : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                       )}>
-                        <span className={cn("h-1.5 w-1.5 rounded-full", row.status === "validated" ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-                        {row.status === "validated" ? (language === "ar" ? "مؤكد" : "Validé") : (language === "ar" ? "مؤقت" : "Soumis")}
+                        <span className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          row.status === "verified" || row.status === "validated" ? "bg-emerald-500 animate-pulse" :
+                          row.status === "mismatch" || row.status === "rejected" ? "bg-rose-500 animate-pulse" :
+                          row.status === "ocr_processing" ? "bg-blue-500 animate-pulse" :
+                          "bg-amber-500"
+                        )} />
+                        {row.status === "verified" || row.status === "validated" ? (language === "ar" ? "مطابق (مؤكد)" : "Vérifié (OK)")
+                          : row.status === "mismatch" ? (language === "ar" ? "اختلاف بالصورة" : "Anomalie PV")
+                          : row.status === "rejected" ? (language === "ar" ? "مرفوض" : "Rejeté")
+                          : row.status === "ocr_processing" ? (language === "ar" ? "جاري التحقق" : "Vérification en cours")
+                          : (language === "ar" ? "مؤقت (بانتظار الصورة)" : "En attente du PV")}
                       </span>
                     </td>
                   </tr>

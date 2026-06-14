@@ -42,12 +42,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen w-full bg-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="h-screen w-full bg-white dark:bg-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Subtle Background Lighting */}
       <div 
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
         style={{
-          background: "radial-gradient(circle at 0% 0%, rgba(0, 98, 51, 0.08) 0%, transparent 40%)"
+          background: "radial-gradient(circle at 0% 0%, rgba(0, 98, 51, 0.05) 0%, transparent 40%)"
         }}
       />
       
@@ -59,25 +59,28 @@ export default function LoginPage() {
       >
         {/* Branding Section */}
         <div className="text-center mb-6">
-          <motion.div 
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-zinc-900/50 border border-white/5 mb-4 backdrop-blur-xl"
+          <img 
+            src="/icon.png" 
+            alt="PVP Logo" 
+            className="w-32 h-32 object-contain mx-auto mb-4" 
+          />
+          <h1 
+            className="text-lg sm:text-xl md:text-2xl font-semibold text-zinc-900 tracking-tight leading-tight mb-2 whitespace-nowrap"
+            style={{ 
+              color: '#09090b', 
+              whiteSpace: 'nowrap', 
+              fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
+              fontWeight: 600
+            }}
           >
-            <ShieldCheck size={28} className="text-emerald-500" strokeWidth={1.5} />
-          </motion.div>
-          <h1 className="text-2xl md:text-[28px] font-bold text-white tracking-tight leading-tight mb-2">
-            ANIE Electoral <br /> Management System
+            PVP Electoral Management System
           </h1>
-          <p className="text-zinc-500 text-sm font-medium">
-            Secure Administrative Access
-          </p>
         </div>
 
         {/* Login Card */}
-        <div className="glass-morphism rounded-[28px] p-6 md:p-8 border border-white/5 bg-[#0f0f12]/75 backdrop-blur-2xl relative">
+        <div className="rounded-[28px] p-6 md:p-8 border border-zinc-200 bg-white/80 shadow-xl backdrop-blur-2xl relative">
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-white tracking-tight">Welcome Back</h2>
+            <h2 className="text-xl font-bold text-zinc-900 tracking-tight">Welcome Back</h2>
             <p className="text-zinc-500 text-[13px] mt-1">Authenticate to continue</p>
           </div>
 
@@ -95,16 +98,17 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Email Identifier</label>
+              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Identifiant Email</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail size={16} className="text-zinc-600 group-focus-within:text-emerald-500 transition-colors" />
+                  <Mail size={16} className="text-zinc-400 group-focus-within:text-emerald-600 transition-colors" />
                 </div>
                 <input 
                   required
                   type="email" 
-                  placeholder="admin@anie.dz"
-                  className="w-full h-[50px] pl-11 pr-4 rounded-[12px] bg-white/[0.03] border border-white/10 text-white placeholder:text-zinc-700 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-sm font-medium"
+                  placeholder="admin@pvp.dz"
+                  className="w-full h-[50px] pl-11 pr-4 rounded-[12px] border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 transition-all text-sm font-medium shadow-sm"
+                  style={{ backgroundColor: 'white', color: 'black' }}
                   value={formData.email}
                   onChange={(e) => { setFormData({...formData, email: e.target.value}); setError(null); }}
                 />
@@ -112,23 +116,24 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Secure Token</label>
+              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-1">Mot de passe</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock size={16} className="text-zinc-600 group-focus-within:text-emerald-500 transition-colors" />
+                  <Lock size={16} className="text-zinc-400 group-focus-within:text-emerald-600 transition-colors" />
                 </div>
                 <input 
                   required
                   type={showPassword ? "text" : "password"} 
                   placeholder="••••••••••••"
-                  className="w-full h-[50px] pl-11 pr-11 rounded-[12px] bg-white/[0.03] border border-white/10 text-white placeholder:text-zinc-700 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-sm font-medium"
+                  className="w-full h-[50px] pl-11 pr-11 rounded-[12px] border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 transition-all text-sm font-medium shadow-sm"
+                  style={{ backgroundColor: 'white', color: 'black' }}
                   value={formData.password}
                   onChange={(e) => { setFormData({...formData, password: e.target.value}); setError(null); }}
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-zinc-600 hover:text-white transition-colors"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-zinc-400 hover:text-zinc-900 transition-colors"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -157,22 +162,10 @@ export default function LoginPage() {
           <div className="mt-4 flex flex-col items-center gap-3">
             <Link
               href="/register"
-              className="w-full h-[44px] rounded-[12px] border border-white/10 bg-white/[0.02] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-white/[0.05] hover:border-emerald-500/30 transition-all flex items-center justify-center"
+              className="w-full h-[44px] rounded-[12px] border border-zinc-200 bg-white text-zinc-900 text-[11px] font-bold uppercase tracking-widest hover:bg-zinc-50 shadow-sm transition-all flex items-center justify-center"
             >
               Create Super Admin Account
             </Link>
-            <button
-              type="button"
-              className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest"
-            >
-              Forgot Access Token?
-            </button>
-          </div>
-
-          {/* Card Footer */}
-          <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-center gap-2">
-            <Shield size={12} className="text-zinc-600" />
-            <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em]">Secure Government Infrastructure</span>
           </div>
         </div>
       </motion.div>

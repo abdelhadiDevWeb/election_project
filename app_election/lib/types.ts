@@ -273,11 +273,13 @@ export interface IMessage {
 export interface INotification {
   id: string;
   _id: string;
-  user: string;
+  receivers: string[];
+  sender?: any;
   title: string;
   body: string;
   type: string;
   is_read: boolean;
+  metadata?: any;
   createdAt?: string;
 }
 

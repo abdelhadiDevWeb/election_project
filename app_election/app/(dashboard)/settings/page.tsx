@@ -267,7 +267,7 @@ export default function SettingsPage() {
                       <div>
                         <h3 className="text-lg font-black text-zinc-900 dark:text-white">{user.full_name}</h3>
                         <p className="text-sm font-medium text-zinc-500">
-                          {roleLabel(user.role, language)} • ANIE
+                          {roleLabel(user.role, language)} • PVP
                         </p>
                       </div>
                     </div>

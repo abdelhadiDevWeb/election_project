@@ -29,4 +29,4 @@ const resultCenterSchema = new Schema<IResultCenter>(
 resultCenterSchema.index({ center: 1, party: 1 }, { unique: true });
 resultCenterSchema.index({ status: 1 });
 
-export const ResultCenter = mongoose.model<IResultCenter>("ResultCenter", resultCenterSchema);
+export const ResultCenter = mongoose.model<IResultCenter>("ResultCenter", resultCenterSchema, "result centers");

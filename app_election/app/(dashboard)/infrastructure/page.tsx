@@ -149,7 +149,7 @@ export default function InfrastructureSetup() {
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "Template_Infrastructure_ANIE.xlsx");
+    XLSX.writeFile(wb, "Template_Infrastructure_PVP.xlsx");
   };
 
   const visibleWilayas = useMemo(() => {
@@ -802,7 +802,7 @@ export default function InfrastructureSetup() {
             {activeTab === "wilayas" && canManageWilayas && (
               <DataTable 
                 title={language === 'ar' ? 'سجل الولايات' : "Registre des Wilayas"}
-                exportFileName="registre-wilayas-anie"
+                exportFileName="registre-wilayas-pvp"
                 columns={[
                   { header: language === 'ar' ? 'الرمز' : "Code", accessor: "num_wilaya" },
                   {
@@ -883,8 +883,8 @@ export default function InfrastructureSetup() {
                 }
                 exportFileName={
                   communeFilterWilaya
-                    ? `communes-wilaya-${communeFilterWilaya.num_wilaya}-anie`
-                    : "registre-communes-anie"
+                    ? `communes-wilaya-${communeFilterWilaya.num_wilaya}-pvp`
+                    : "registre-communes-pvp"
                 }
                 columns={[
                   { header: language === 'ar' ? 'رقم' : "N°", accessor: "num_bladia" },
@@ -928,7 +928,7 @@ export default function InfrastructureSetup() {
             {activeTab === "centers" && canManageCenters && (
               <DataTable 
                 title={language === 'ar' ? 'مراكز الاقتراع' : "Centres de Scrutin"}
-                exportFileName="registre-centres-anie"
+                exportFileName="registre-centres-pvp"
                 columns={[
                   {
                     header: language === 'ar' ? 'مركز التصويت' : "Centre de Vote",
@@ -980,7 +980,7 @@ export default function InfrastructureSetup() {
             {activeTab === "desks" && canManageDesks && (
               <DataTable 
                 title={language === 'ar' ? 'مكاتب التصويت' : "Bureaux de Vote"}
-                exportFileName="registre-bureaux-anie"
+                exportFileName="registre-bureaux-pvp"
                 columns={[
                   {
                     header: language === 'ar' ? 'رقم المكتب' : "N° Bureau",

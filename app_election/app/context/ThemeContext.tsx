@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState, typ
 
 export type ThemeMode = "light" | "dark" | "system";
 
-const STORAGE_KEY = "anie_theme";
+const STORAGE_KEY = "pvp_theme";
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "light";

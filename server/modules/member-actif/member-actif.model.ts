@@ -43,4 +43,4 @@ const memberActifSchema = new Schema<IMemberActif>(
 
 memberActifSchema.index({ commune: 1, party: 1 });
 
-export const MemberActif = mongoose.model<IMemberActif>("MemberActif", memberActifSchema);
+export const MemberActif = mongoose.model<IMemberActif>("MemberActif", memberActifSchema, "membre actifs");

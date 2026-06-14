@@ -5,7 +5,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "ANIE | Jour d'Élection — Portail Observateur",
+  title: "PVP | Jour d'Élection — Portail Observateur",
   description: "Portail sécurisé des observateurs pour le jour de scrutin. Saisie des résultats et suivi en temps réel.",
 };
 

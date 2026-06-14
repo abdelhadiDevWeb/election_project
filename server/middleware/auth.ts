@@ -48,7 +48,7 @@ function getBearerToken(authHeader: unknown): string | null {
 // ────────────────────────────────────────────────────────────────
 
 export const requireAuth: RequestHandler = (req, res, next) => {
-  const token = getBearerToken(req.headers.authorization);
+  const token = getBearerToken(req.headers.authorization) || (req.query.token as string);
   if (!token) return res.status(401).json({ ok: false, message: "Missing token" });
 
   try {

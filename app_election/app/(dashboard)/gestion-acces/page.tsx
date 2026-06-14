@@ -17,6 +17,8 @@ import {
   Users,
   Eye,
   EyeOff,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,11 +64,18 @@ export default function GestionAcces() {
     return wilayasData;
   }, [wilayasData, isSuperAdmin, user?.wilaya_id]);
 
+  const [adminRoleFilter, setAdminRoleFilter] = useState<"all" | "super_admin" | "admin_wilaya" | "admin_commun">("all");
+
   const visibleAdmins = useMemo(() => {
-    if (isSuperAdmin) return adminsData;
-    if (isAdminWilaya) return adminsData.filter((a) => a.role === "admin_commun");
-    return [];
-  }, [adminsData, isSuperAdmin, isAdminWilaya]);
+    let list: Record<string, any>[] = [];
+    if (isSuperAdmin) list = adminsData;
+    else if (isAdminWilaya) list = adminsData.filter((a) => a.role === "admin_commun");
+    
+    if (adminRoleFilter !== "all") {
+      list = list.filter((a) => a.role === adminRoleFilter);
+    }
+    return list;
+  }, [adminsData, isSuperAdmin, isAdminWilaya, adminRoleFilter]);
 
   const [activeTab, setActiveTab] = useState<"admins" | "members">(
     user?.role === "admin_commun" ? "members" : "admins"
@@ -727,7 +736,27 @@ export default function GestionAcces() {
                       ? "سجل الإدارة"
                       : "Registre Administration"
                 }
-                exportFileName="registre-admins-anie"
+                exportFileName="registre-admins-pvp"
+                headerExtra={
+                  <div className="relative group flex items-center">
+                    <div className="absolute start-3 pointer-events-none text-zinc-400 group-hover:text-algerian-green transition-colors">
+                      <Filter size={16} />
+                    </div>
+                    <select
+                      className="h-11 ps-9 pe-8 appearance-none rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 text-sm font-bold text-zinc-600 dark:text-zinc-300 focus:ring-2 focus:ring-algerian-green/10 cursor-pointer transition-all hover:bg-zinc-50 dark:hover:bg-white/5"
+                      value={adminRoleFilter}
+                      onChange={(e) => setAdminRoleFilter(e.target.value as any)}
+                    >
+                      <option value="all">{language === "ar" ? "الكل (تصفية)" : "Tous (Filtre)"}</option>
+                      {isSuperAdmin && <option value="super_admin">{t("roles.super_admin")}</option>}
+                      <option value="admin_wilaya">{t("roles.admin_wilaya")}</option>
+                      <option value="admin_commun">{t("roles.admin_commun")}</option>
+                    </select>
+                    <div className="absolute end-3 pointer-events-none text-zinc-400">
+                      <ChevronDown size={14} />
+                    </div>
+                  </div>
+                }
                 columns={[
                   {
                     header: language === "ar" ? "المشغل" : "Opérateur",

@@ -46,10 +46,10 @@ import * as infraImportCtrl from "../modules/infrastructure/infrastructure-impor
 // ── Results ──
 import * as resultDeskCtrl from "../modules/result-desk/result-desk.controller";
 import * as resultDeskVal from "../modules/result-desk/result-desk.validator";
+import * as resultCenterVal from "../modules/result-center/result-center.validator";
 
 // ── Messaging ──
-import * as messageCtrl from "../modules/message/message.controller";
-import * as messageVal from "../modules/message/message.validator";
+
 import * as notifCtrl from "../modules/notification/notification.controller";
 import * as notifVal from "../modules/notification/notification.validator";
 
@@ -61,10 +61,17 @@ import { Center } from "../modules/center/center.model";
 import { ResultDesk } from "../modules/result-desk/result-desk.model";
 import { RoleElectionDay } from "../modules/role-election-day/role-election-day.model";
 
+// ── Settings ──
+import * as settingsCtrl from "../modules/election-day-access/election-day-access.controller";
+
 export const apiRouter = Router();
 
 // ────────────────────────── Health ──────────────────────────
 apiRouter.get("/health", (_req, res) => res.json({ ok: true }));
+
+// ────────────────────────── Settings ──────────────────────────
+apiRouter.get("/settings/public", settingsCtrl.getPublicSettings);
+apiRouter.put("/settings", requireAuth, requireRoles("super_admin"), writeLimiter, settingsCtrl.updateSettings);
 
 // ────────────────────────── Auth ────────────────────────────
 apiRouter.post("/auth/register", authLimiter, validate(registerSuperAdminSchema), authCtrl.registerHandler);
@@ -165,10 +172,18 @@ apiRouter.delete("/roles-election-day/:id", requireAuth, requireRoles("super_adm
 // ────────────────────────── Results ─────────────────────────
 apiRouter.post("/results/desk", requireAuth, requireRoles("role_election_day"), uploadLimiter, uploadImage.single("image"), validate(resultDeskVal.submitDeskSchema), resultDeskCtrl.submitDesk);
 apiRouter.get("/results/desk", requireAuth, validate(resultDeskVal.listDeskSchema), resultDeskCtrl.listDesk);
+apiRouter.get("/results/desk/:id/image", requireAuth, resultDeskCtrl.getDeskImage);
 apiRouter.get("/results/desk/:id", requireAuth, validate(resultDeskVal.getByIdSchema), resultDeskCtrl.getDeskById);
-apiRouter.put("/results/desk/:id/status", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, validate(resultDeskVal.updateStatusSchema), resultDeskCtrl.updateDeskStatus);
-apiRouter.post("/results/desk/:id/ocr", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, resultDeskCtrl.triggerOcr);
+apiRouter.put("/results/desk/:id/status", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun", "role_election_day"), writeLimiter, validate(resultDeskVal.updateStatusSchema), resultDeskCtrl.updateDeskStatus);
+apiRouter.post("/results/desk/:id/ocr", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), writeLimiter, resultDeskCtrl.triggerOcr);
 apiRouter.post("/results/desk/:id/human-review", requireAuth, requireRoles("super_admin", "admin_wilaya"), writeLimiter, resultDeskCtrl.requestHumanReview);
+
+apiRouter.get("/results/ocr-summary", requireAuth, requireRoles("super_admin", "admin_wilaya", "admin_commun"), resultDeskCtrl.getOcrSummary);
+
+// ── Verification ──
+apiRouter.post("/results/desk/upload-image/:deskId", requireAuth, requireRoles("role_election_day"), uploadLimiter, uploadImage.single("image"), resultDeskCtrl.uploadDeskImage);
+apiRouter.post("/results/desk/verify-desk/:deskId", requireAuth, requireRoles("role_election_day"), uploadLimiter, uploadImage.single("image"), validate(resultDeskVal.verifyDeskSchema), resultDeskCtrl.verifyDesk);
+apiRouter.get("/results/desk/:deskId/verification", requireAuth, requireRoles("role_election_day"), validate(resultDeskVal.verifyDeskSchema), resultDeskCtrl.getDeskVerificationReport);
 
 apiRouter.post("/results/center", requireAuth, requireRoles("role_election_day"), uploadLimiter, uploadImage.single("image"), validate(resultDeskVal.submitCenterSchema), resultDeskCtrl.submitCenter);
 apiRouter.get("/results/center", requireAuth, validate(resultDeskVal.listCenterSchema), resultDeskCtrl.listCenter);
@@ -264,11 +279,59 @@ apiRouter.get("/observer/my-results", requireAuth, requireRoles("role_election_d
   }
 });
 
-// ────────────────────────── Messages ────────────────────────
-apiRouter.post("/messages", requireAuth, writeLimiter, uploadMessageFiles.fields([{ name: "images", maxCount: 5 }, { name: "video", maxCount: 1 }, { name: "pdf", maxCount: 1 }]), validate(messageVal.sendSchema), messageCtrl.send);
-apiRouter.get("/messages", requireAuth, validate(messageVal.listSchema), messageCtrl.list);
-apiRouter.get("/messages/:id", requireAuth, validate(messageVal.getByIdSchema), messageCtrl.getById);
-apiRouter.put("/messages/:id/read", requireAuth, messageCtrl.markRead);
+// Centre-scoped results for observateur_centre
+apiRouter.get("/observer/centre-results", requireAuth, requireRoles("role_election_day"), async (req, res) => {
+  try {
+    const centerId = req.user?.center_id;
+    if (!centerId) {
+      return res.status(400).json({ ok: false, message: "No center assigned to this observer" });
+    }
+
+    const { page = 1, limit = 30, status } = req.query as any;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const deskMatch: any = { center: new (await import("mongoose")).Types.ObjectId(centerId) };
+    const desks = await Desk.find(deskMatch).select("_id").lean();
+    const deskIds = desks.map((d: any) => d._id);
+
+    const resultFilter: any = { desk: { $in: deskIds } };
+    if (status) resultFilter.status = status;
+
+    const [total, results] = await Promise.all([
+      ResultDesk.countDocuments(resultFilter),
+      ResultDesk.find(resultFilter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate("desk", "desk_number type")
+        .populate("candidat", "full_name")
+        .populate("party", "name")
+        .select("-image -image_mimetype")
+        .lean(),
+    ]);
+
+    // Add hasImage flag by checking if image field exists
+    const resultsWithFlag = await Promise.all(
+      results.map(async (r: any) => {
+        const doc = await ResultDesk.exists({ _id: r._id, $expr: { $ne: [{ $type: "$image" }, "missing"] } });
+        return { ...r, hasImage: !!doc };
+      })
+    );
+
+    res.json({
+      ok: true,
+      data: resultsWithFlag,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+
 
 // ────────────────────────── Notifications ───────────────────
 apiRouter.get("/notifications", requireAuth, validate(notifVal.listSchema), notifCtrl.list);

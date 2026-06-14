@@ -1,8 +1,8 @@
-ANIE Electoral Management System
+PVP Electoral Management System
 Ultra-Premium UI/UX Redesign Specification
 1. PROJECT VISION
 
-The ANIE Electoral Management System must evolve into a world-class civic-tech platform combining:
+The PVP Electoral Management System must evolve into a world-class civic-tech platform combining:
 
 enterprise-grade usability
 premium visual refinement

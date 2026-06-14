@@ -245,6 +245,13 @@ export async function login(emailInput: string, passwordInput: string, ip: strin
     throw Object.assign(new Error("Access denied for this account type"), { status: 403 });
   }
 
+  // Check if Election Day is open
+  const { ElectionDay } = await import("../election-day-access/election-day-access.model");
+  const settings = await ElectionDay.findOne();
+  if (!settings || !settings.is_election_day_open) {
+    throw Object.assign(new Error("L'élection n'est pas encore ouverte."), { status: 403 });
+  }
+
   if (await checkLockout(`acct:${roleUser._id}`)) {
     throw Object.assign(new Error("Account locked. Try again later."), { status: 429 });
   }

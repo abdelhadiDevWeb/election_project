@@ -13,7 +13,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
-    const stored = localStorage.getItem("anie_theme") as "light" | "dark" | null;
+    const stored = localStorage.getItem("pvp_theme") as "light" | "dark" | null;
     const initial = stored || "dark";
     setResolvedTheme(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (theme: "light" | "dark") => {
     setResolvedTheme(theme);
-    localStorage.setItem("anie_theme", theme);
+    localStorage.setItem("pvp_theme", theme);
     document.documentElement.classList.toggle("dark", theme === "dark");
   };
 

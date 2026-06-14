@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────────
-// Central API client for the ANIE Electoral Management System.
+// Central API client for the PVP Electoral Management System.
 // Handles JWT token management, auto-refresh, and typed requests.
 // ────────────────────────────────────────────────────────────────
 
@@ -7,7 +7,7 @@ import type { ApiResponse, LoginResponse, RefreshResponse } from "./types";
 
 const BASE_URL = "/api";
 
-const TOKEN_KEY = "anie_token";
+const TOKEN_KEY = "pvp_token";
 
 let accessToken: string | null = (typeof window !== "undefined") ? localStorage.getItem(TOKEN_KEY) : null;
 let refreshPromise: Promise<string | null> | null = null;
@@ -231,5 +231,33 @@ export const api = {
     new_password: string;
   }): Promise<{ ok: boolean; message?: string }> {
     return request("/auth/password", { method: "PATCH", body });
+  },
+
+  // Results
+  getResultsDesk(params?: {
+    wilayaId?: string;
+    communeId?: string;
+    centerId?: string;
+    desk?: string;
+    status?: string;
+    candidat?: string;
+    party?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ ok: boolean; data: any[]; total: number; page: number; limit: number; totalPages: number }> {
+    return api.get("/results/desk", params as Record<string, unknown>);
+  },
+
+  getOcrSummary(params?: { wilayaId?: string; communeId?: string }): Promise<{ ok: boolean; data: { summary: Record<string, number>; total: number } }> {
+    return api.get("/results/ocr-summary", params as Record<string, unknown>);
+  },
+
+  triggerOcr(resultId: string): Promise<{ ok: boolean; data: any; message: string }> {
+    return request(`/results/desk/${resultId}/ocr`, { method: "POST" });
+  },
+
+  getDeskImageUrl(resultId: string): string {
+    const token = getAccessToken() || "";
+    return `/api/results/desk/${resultId}/image?token=${token}`;
   },
 };

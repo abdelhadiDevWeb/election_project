@@ -21,7 +21,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "Déconnexion",
     "common.search": "Rechercher…",
     "dash.title": "Jour d'Élection",
-    "login.title": "ANIE Jour d'Élection",
+    "login.title": "PVP Jour d'Élection",
     "login.subtitle": "Portail Observateur Sécurisé",
     "login.welcome": "Bienvenue",
     "login.authenticate": "Authentifiez-vous pour continuer",
@@ -67,7 +67,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "تسجيل الخروج",
     "common.search": "بحث…",
     "dash.title": "يوم الانتخاب",
-    "login.title": "ANIE يوم الانتخاب",
+    "login.title": "PVP يوم الانتخاب",
     "login.subtitle": "بوابة المراقب الآمنة",
     "login.welcome": "مرحباً",
     "login.authenticate": "قم بالمصادقة للمتابعة",
@@ -112,7 +112,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>("fr");
 
   useEffect(() => {
-    const stored = localStorage.getItem("anie_lang") as Language | null;
+    const stored = localStorage.getItem("pvp_lang") as Language | null;
     if (stored && (stored === "fr" || stored === "ar")) {
       setLanguageState(stored);
       document.documentElement.dir = stored === "ar" ? "rtl" : "ltr";
@@ -122,7 +122,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem("anie_lang", lang);
+    localStorage.setItem("pvp_lang", lang);
     document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = lang;
   }, []);

@@ -135,7 +135,7 @@ export default function RegisterPage() {
               <input
                 required
                 type="email"
-                placeholder="admin@anie.dz"
+                placeholder="admin@pvp.dz"
                 className="w-full h-[46px] pl-11 pr-4 rounded-[12px] bg-white/[0.03] border border-white/10 text-white placeholder:text-zinc-700 outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-sm font-medium"
                 value={formData.email}
                 onChange={(e) => update("email", e.target.value)}

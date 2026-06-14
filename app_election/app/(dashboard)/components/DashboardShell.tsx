@@ -60,20 +60,20 @@ export function DashboardHeader({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex shrink-0 items-center gap-4 self-start rounded-2xl border border-zinc-200 bg-white p-2 dark:border-white/5 dark:bg-zinc-900/50"
+        className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-zinc-200 bg-white p-1 dark:border-white/5 dark:bg-zinc-900/50"
       >
-        <div className="px-6 py-3 border-r border-zinc-100 dark:border-white/5">
-          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">
+        <div className="px-3 py-1.5 border-r border-zinc-100 dark:border-white/5">
+          <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">
             {language === "ar" ? "الحالة" : "Statut"}
           </p>
-          <motion.div className="flex items-center gap-2">
+          <motion.div className="flex items-center gap-1.5">
             <div
               className={cn(
-                "h-2 w-2 rounded-full",
+                "h-1.5 w-1.5 rounded-full",
                 isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
               )}
             />
-            <span className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">
+            <span className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-wider">
               {isConnected
                 ? language === "ar"
                   ? "متزامن"

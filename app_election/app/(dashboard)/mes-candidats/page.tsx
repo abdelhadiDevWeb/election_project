@@ -244,7 +244,7 @@ export default function MesCandidatsPage() {
         >
           <DataTable
             title={language === "ar" ? "قائمة مرشحي" : "Liste de mes candidats"}
-            exportFileName="mes-candidats-anie"
+            exportFileName="mes-candidats-pvp"
             columns={[
               {
                 header: language === "ar" ? "المترشح" : "Candidat",

@@ -42,7 +42,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
 
   return (
     <header className="h-20 glass sticky top-0 z-30 flex items-center justify-between px-4 lg:px-10 border-b border-white/5 backdrop-blur-xl shadow-sm">
-      <div className="flex items-center gap-3 lg:gap-6">
+      <div className="flex items-center gap-2 lg:gap-6">
         {/* Mobile Hamburger Menu */}
         <button 
           onClick={toggleSidebar}
@@ -62,7 +62,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 lg:gap-4">
         <LanguageSwitcher />
         
         <div className="flex items-center gap-1 bg-zinc-100 dark:bg-white/5 p-1 rounded-xl border border-zinc-200 dark:border-white/10">
@@ -80,7 +80,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
 
         <div className="hidden sm:block h-8 w-[1px] bg-zinc-200 dark:bg-white/10 mx-1"></div>
 
-        <div className="flex items-center gap-3 group cursor-pointer ps-1 sm:ps-2 relative"
+        <div className="flex items-center gap-1 sm:gap-3 group cursor-pointer ps-1 sm:ps-2 relative"
              onClick={() => setShowUserMenu(!showUserMenu)}
         >
           <div className="hidden md:flex flex-col items-end">

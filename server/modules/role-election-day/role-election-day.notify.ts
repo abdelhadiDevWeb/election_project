@@ -72,7 +72,7 @@ function buildFrenchMessage(params: {
   const roleFr = ROLE_LABELS_FR[params.role] || params.role;
 
   return [
-    `ANIE - Bonjour ${name}.`,
+    `PVP - Bonjour ${name}.`,
     `Mission: ${params.missionDayFr} a ${params.missionTime}, centre ${params.centerName}, role ${roleFr}.`,
     "Acces plateforme:",
     `Email: ${params.email}`,
@@ -93,7 +93,7 @@ function buildArabicMessage(params: {
   const roleAr = ROLE_LABELS_AR[params.role] || params.role;
 
   return [
-    `ANIE - مرحبا ${name}.`,
+    `PVP - مرحبا ${name}.`,
     `المهمة: ${params.missionDayAr} الساعة ${params.missionTime}، المركز ${params.centerName}، الدور ${roleAr}.`,
     "الدخول للمنصة:",
     `البريد: ${params.email}`,

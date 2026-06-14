@@ -6,7 +6,7 @@
 import type { LoginResponse, RefreshResponse, ApiResponse } from "./types";
 
 const BASE_URL = "/api";
-const TOKEN_KEY = "anie_observer_token";
+const TOKEN_KEY = "pvp_observer_token";
 
 let accessToken: string | null = (typeof window !== "undefined") ? localStorage.getItem(TOKEN_KEY) : null;
 let refreshPromise: Promise<string | null> | null = null;
@@ -197,5 +197,19 @@ export const api = {
 
   me(): Promise<{ ok: boolean; user: Record<string, unknown> }> {
     return request("/auth/me");
+  },
+
+  // Observer Centre
+  getCentreResults(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<{ ok: boolean; data: any[]; total: number; page: number; limit: number; totalPages: number }> {
+    return api.get("/observer/centre-results", params as Record<string, unknown>);
+  },
+
+  getDeskImageUrl(resultId: string): string {
+    const token = getAccessToken() || "";
+    return `/api/results/desk/${resultId}/image?token=${token}`;
   },
 };
