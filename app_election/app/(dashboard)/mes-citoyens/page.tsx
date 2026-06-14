@@ -329,9 +329,15 @@ export default function MesCitoyensPage() {
                 type="tel"
                 disabled={isSubmitting}
                 placeholder="0555123456"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="^0[5-7][0-9]{8}$"
                 className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold outline-none disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  setFormData({ ...formData, phone: digits });
+                }}
               />
             </div>
           </div>

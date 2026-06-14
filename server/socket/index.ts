@@ -13,11 +13,14 @@ import type { JwtUser } from "../middleware/auth";
 
 const MAX_EVENTS_PER_MIN = 30;
 
+let ioInstance: Server | null = null;
+
 export function initSocket(server: HttpServer): Server {
   const io = new Server(server, {
     cors: { origin: env.corsOrigins, credentials: true },
     maxHttpBufferSize: 1e6, // 1 MB max payload
   });
+  ioInstance = io;
 
   // Redis adapter for horizontal scaling
   const redis = getRedis();
@@ -88,6 +91,12 @@ export function initSocket(server: HttpServer): Server {
 }
 
 // ── Helper: emit to specific rooms from controllers ──────────
-export function emitToRoom(io: Server, room: string, event: string, data: unknown) {
-  io.to(room).emit(event, data);
+export function emitToRoom(room: string, event: string, data: unknown) {
+  if (ioInstance) {
+    ioInstance.to(room).emit(event, data);
+  }
+}
+
+export function getIO(): Server | null {
+  return ioInstance;
 }

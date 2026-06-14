@@ -16,6 +16,22 @@ import type {
 } from "@/lib/types";
 import { communeWilayaId, normalizeEntityId, wilayaEntityId } from "@/lib/entity-id";
 
+function resolveCommuneLabel(
+  communeRef: string | ICommune | undefined | null,
+  communeId: string,
+  communes: ICommune[]
+): string {
+  if (communeRef && typeof communeRef === "object") {
+    const c = communeRef as ICommune;
+    return c.name_ar || c.name_fr || "";
+  }
+  const id =
+    communeId || (typeof communeRef === "string" && communeRef ? communeRef : "");
+  if (!id) return "";
+  const found = communes.find((c) => String(c._id || c.id) === String(id));
+  return found ? (found.name_ar || found.name_fr || "") : "";
+}
+
 export type ElectionScope = "national" | "wilaya" | "commun";
 
 interface DataContextType {
@@ -217,26 +233,49 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const centersData = React.useMemo(() => {
     if (!centersQ.data) return [];
-    return (centersQ.data as ICenter[]).map((c) => ({
-      id: String(c.id || c._id),
-      _id: String(c._id || c.id),
-      name: c.name,
-      location: c.address || c.location || "",
-      male: c.male_count || 0,
-      female: c.female_count || 0,
-      total: c.total_voters ?? (c.male_count || 0) + (c.female_count || 0),
-      numbers_desks: c.number_of_desks || 0,
-      wilaya_id: c.wilaya
-        ? String(typeof c.wilaya === "object" ? (c.wilaya as IWilaya)._id || (c.wilaya as IWilaya).id : c.wilaya)
-        : "",
-      commune_id: c.commune
-        ? String(typeof c.commune === "object" ? (c.commune as ICommune)._id || (c.commune as ICommune).id : c.commune)
-        : "",
-    }));
-  }, [centersQ.data]);
+    const communeList = (communesQ.data || []) as ICommune[];
+    const deskTypeCountsByCenter = new Map<string, { male: number; female: number; total: number }>();
+    ((desksQ.data || []) as IDesk[]).forEach((d) => {
+      const centerId = d.center
+        ? String(typeof d.center === "object" ? (d.center as ICenter)._id || (d.center as ICenter).id : d.center)
+        : "";
+      if (!centerId) return;
+      const entry = deskTypeCountsByCenter.get(centerId) || { male: 0, female: 0, total: 0 };
+      const t = (d as unknown as { type?: "male" | "female" }).type;
+      if (t === "male") entry.male += 1;
+      else if (t === "female") entry.female += 1;
+      entry.total += 1;
+      deskTypeCountsByCenter.set(centerId, entry);
+    });
+    return (centersQ.data as ICenter[]).map((c) => {
+      const communeId = c.commune
+        ? String(
+            typeof c.commune === "object"
+              ? (c.commune as ICommune)._id || (c.commune as ICommune).id
+              : c.commune
+          )
+        : "";
+      return {
+        id: String(c.id || c._id),
+        _id: String(c._id || c.id),
+        name: c.name,
+        commune: resolveCommuneLabel(c.commune, communeId, communeList),
+        location: c.address || c.location || "",
+        male: deskTypeCountsByCenter.get(String(c._id || c.id))?.male ?? 0,
+        female: deskTypeCountsByCenter.get(String(c._id || c.id))?.female ?? 0,
+        total: deskTypeCountsByCenter.get(String(c._id || c.id))?.total ?? 0,
+        numbers_desks: c.number_of_desks || 0,
+        wilaya_id: c.wilaya
+          ? String(typeof c.wilaya === "object" ? (c.wilaya as IWilaya)._id || (c.wilaya as IWilaya).id : c.wilaya)
+          : "",
+        commune_id: communeId,
+      };
+    });
+  }, [centersQ.data, desksQ.data, communesQ.data]);
 
   const desksData = React.useMemo(() => {
     if (!desksQ.data) return [];
+    const communeList = (communesQ.data || []) as ICommune[];
     const centerMeta = new Map<string, { wilaya_id: string; commune_id: string }>();
     ((centersQ.data || []) as ICenter[]).forEach((c) => {
       const id = String(c._id || c.id);
@@ -249,25 +288,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
           : "",
       });
     });
-    return (desksQ.data as IDesk[]).map((d) => {
-      const centerId = d.center
-        ? String(typeof d.center === "object" ? (d.center as ICenter)._id || (d.center as ICenter).id : d.center)
-        : "";
-      const meta = centerMeta.get(centerId);
-      return {
-        id: String(d.id || d._id),
-        _id: String(d._id || d.id),
-        num_desk: String(d.desk_number).padStart(2, "0"),
-        center: typeof d.center === "object" ? (d.center as ICenter).name : String(d.center || ""),
-        center_id: centerId,
-        wilaya_id: meta?.wilaya_id || "",
-        commune_id: meta?.commune_id || "",
-        male: d.male_count || 0,
-        female: d.female_count || 0,
-        total: d.total_voters || 0,
-      };
-    });
-  }, [desksQ.data, centersQ.data]);
+    return (desksQ.data as IDesk[])
+      .map((d) => {
+        const centerId = d.center
+          ? String(typeof d.center === "object" ? (d.center as ICenter)._id || (d.center as ICenter).id : d.center)
+          : "";
+        const meta = centerMeta.get(centerId);
+        const deskCommuneId = d.commune
+          ? String(
+              typeof d.commune === "object"
+                ? (d.commune as ICommune)._id || (d.commune as ICommune).id
+                : d.commune
+            )
+          : meta?.commune_id || "";
+        return {
+          id: String(d.id || d._id),
+          _id: String(d._id || d.id),
+          desk_number: Number(d.desk_number) || 0,
+          num_desk: String(d.desk_number).padStart(2, "0"),
+          center: typeof d.center === "object" ? (d.center as ICenter).name : String(d.center || ""),
+          center_id: centerId,
+          commune: resolveCommuneLabel(d.commune, deskCommuneId, communeList),
+          wilaya_id: meta?.wilaya_id || "",
+          commune_id: deskCommuneId,
+          type: (d as unknown as { type?: "male" | "female" }).type || "",
+        };
+      })
+      .sort((a, b) => {
+        const byCenter = (a.center_id || a.center).localeCompare(b.center_id || b.center, "ar");
+        if (byCenter !== 0) return byCenter;
+        return a.desk_number - b.desk_number;
+      });
+  }, [desksQ.data, centersQ.data, communesQ.data]);
 
   const partiesData = React.useMemo(() => {
     if (!partiesQ.data) return [];
@@ -516,7 +568,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       location: r.location || resolveCommuneName(r.commune) || resolveWilayaName(r.wilaya),
       code: r.nin ? `TMP-${r.nin.slice(-4)}` : "—",
       status: "Actif",
-      expires: r.assigned_time || "20:00",
+      expires: r.assigned_time || "08:00",
+      assigned_date: r.assigned_date,
+      role_code: r.role,
       nin: r.nin,
       phone: r.phone,
       birthday: r.date_of_birth,

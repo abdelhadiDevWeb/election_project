@@ -39,8 +39,10 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
 app.use(compression());
-app.use(express.json({ limit: "64kb" }));
-app.use(express.urlencoded({ extended: true, limit: "64kb" }));
+// Some admin operations (e.g. infrastructure import) can be larger than 64kb.
+// Keep a reasonable cap to prevent abuse.
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser(env.cookieSecret));
 
 app.use(httpLogger);

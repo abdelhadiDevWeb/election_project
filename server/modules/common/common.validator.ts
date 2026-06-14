@@ -13,8 +13,10 @@ export const nin = Joi.string()
   .message("NIN must be exactly 18 digits");
 
 export const phone = Joi.string()
-  .regex(/^(0|\+213)[5-7]\d{8}$/)
-  .message("Phone must be a valid Algerian number");
+  // Accept Algerian mobile numbers: 05/06/07 + 8 digits (10 digits total).
+  // Also accept +213 or 213 prefix (will be normalized server-side).
+  .regex(/^(0[5-7]\d{8}|\+213[5-7]\d{8}|213[5-7]\d{8})$/)
+  .message("Phone must be Algerian mobile starting with 05/06/07 (10 digits)");
 
 export const email = Joi.string().email().lowercase().trim().max(254);
 

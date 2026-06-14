@@ -7,7 +7,7 @@ export function normalizeAlgerianPhone(raw: string): string | null {
   if (local.startsWith("213")) local = local.slice(3);
   if (local.startsWith("0")) local = local.slice(1);
 
-  if (local.length !== 9 || !/^[5-7]/.test(local)) return null;
+  if (local.length !== 9 || !/^[5-7]\d{8}$/.test(local)) return null;
   return `0${local}`;
 }
 

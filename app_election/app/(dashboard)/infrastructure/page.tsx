@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../context/DataContext";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { geoLabelLatin, resolveGeoLabelForExport } from "@/lib/export-geo";
+import { communeWilayaId, normalizeEntityId, wilayaEntityId } from "@/lib/entity-id";
 
 export default function InfrastructureSetup() {
   const { 
@@ -50,7 +51,7 @@ export default function InfrastructureSetup() {
   const defaultTab: InfraTab = isAdminCommun ? "desks" : isAdminWilaya ? "communes" : "wilayas";
 
   const [activeTab, setActiveTab] = useState<InfraTab>(defaultTab);
-  const [communeWilayaFilter, setCommuneWilayaFilter] = useState<string | null>(null);
+  const [selectedWilayaId, setSelectedWilayaId] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"wilaya" | "commune" | "center" | "desk">("center");
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -67,7 +68,8 @@ export default function InfrastructureSetup() {
     male: 0,
     female: 0,
     total: 0,
-    desksCount: 0
+    desksCount: 0,
+    deskType: "" as "" | "male" | "female",
   });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,11 +176,11 @@ export default function InfrastructureSetup() {
     if (isAdminWilaya && user?.wilaya_id) {
       rows = rows.filter((c) => String(c.wilaya_id) === String(user.wilaya_id));
     }
-    if (communeWilayaFilter) {
-      rows = rows.filter((c) => String(c.wilaya_id) === String(communeWilayaFilter));
+    if (selectedWilayaId) {
+      rows = rows.filter((c) => String(c.wilaya_id) === String(selectedWilayaId));
     }
     return rows;
-  }, [communesData, isAdminCommun, isAdminWilaya, user?.wilaya_id, user?.commune_id, communeWilayaFilter]);
+  }, [communesData, isAdminCommun, isAdminWilaya, user?.wilaya_id, user?.commune_id, selectedWilayaId]);
 
   const visibleCenters = useMemo(() => {
     if (!canManageCenters) return [];
@@ -189,8 +191,11 @@ export default function InfrastructureSetup() {
     if (isAdminCommun && user?.commune_id) {
       rows = rows.filter((c) => String(c.commune_id) === String(user.commune_id));
     }
+    if (isSuperAdmin && selectedWilayaId) {
+      rows = rows.filter((c) => String(c.wilaya_id) === String(selectedWilayaId));
+    }
     return rows;
-  }, [centersData, canManageCenters, isAdminWilaya, isAdminCommun, user?.wilaya_id, user?.commune_id]);
+  }, [centersData, canManageCenters, isAdminWilaya, isAdminCommun, isSuperAdmin, user?.wilaya_id, user?.commune_id, selectedWilayaId]);
 
   const visibleDesks = useMemo(() => {
     let rows = desksData;
@@ -200,8 +205,11 @@ export default function InfrastructureSetup() {
     if (isAdminCommun && user?.commune_id) {
       rows = rows.filter((d) => String(d.commune_id) === String(user.commune_id));
     }
+    if (isSuperAdmin && selectedWilayaId) {
+      rows = rows.filter((d) => String(d.wilaya_id) === String(selectedWilayaId));
+    }
     return rows;
-  }, [desksData, isAdminWilaya, isAdminCommun, user?.wilaya_id, user?.commune_id]);
+  }, [desksData, isAdminWilaya, isAdminCommun, isSuperAdmin, user?.wilaya_id, user?.commune_id, selectedWilayaId]);
 
   const scopedCentersForDesk = useMemo(() => {
     if (isAdminWilaya && user?.wilaya_id) {
@@ -221,6 +229,12 @@ export default function InfrastructureSetup() {
     return [];
   }, [wilayasData, isSuperAdmin, isAdminWilaya, isAdminCommun, user?.wilaya_id]);
 
+  const communesForCenterForm = useMemo(() => {
+    const wId = normalizeEntityId(formData.wilayaId);
+    if (!wId) return [];
+    return communesData.filter((c) => communeWilayaId(c) === wId);
+  }, [communesData, formData.wilayaId]);
+
   useEffect(() => {
     const allowed: InfraTab[] = [];
     if (canManageWilayas) allowed.push("wilayas");
@@ -232,7 +246,7 @@ export default function InfrastructureSetup() {
 
   useEffect(() => {
     if (isAdminWilaya && user?.wilaya_id) {
-      setCommuneWilayaFilter(String(user.wilaya_id));
+      setSelectedWilayaId(String(user.wilaya_id));
     }
   }, [isAdminWilaya, user?.wilaya_id]);
 
@@ -244,18 +258,45 @@ export default function InfrastructureSetup() {
     setModalType(type);
     setEditingItem(item);
     if (item) {
+      let wilayaId =
+        normalizeEntityId(item.wilaya_id) ||
+        normalizeEntityId(item.wilaya?._id) ||
+        normalizeEntityId(item.wilaya?.id) ||
+        normalizeEntityId(item.wilaya);
+      let communeId =
+        normalizeEntityId(item.commune_id) ||
+        normalizeEntityId(item.commune?._id) ||
+        normalizeEntityId(item.commune?.id) ||
+        normalizeEntityId(item.commune);
+      if (!wilayaId && communeId) {
+        const commune = communesData.find((c) => {
+          const cId = normalizeEntityId(c._id) || normalizeEntityId(c.id);
+          return cId === communeId;
+        });
+        if (commune) wilayaId = communeWilayaId(commune);
+      }
+      const deskNum =
+        item.desk_number != null
+          ? String(item.desk_number)
+          : String(item.num_desk || "").replace(/^0+/, "") || "";
       setFormData({
         name: item.name || item.num_desk || "",
-        num: item.num_wilaya || item.num_bladia || item.num_desk || "",
+        num: type === "desk" ? deskNum : item.num_wilaya || item.num_bladia || item.num_desk || "",
         seats: item.seats_count?.toString() || "",
-        wilayaId: item.wilaya?._id || item.wilaya?.id || item.wilaya || "",
-        communeId: item.commune?._id || item.commune?.id || item.commune || "",
-        centerId: item.center?._id || item.center?.id || item.center || "",
+        wilayaId,
+        communeId,
+        centerId:
+          normalizeEntityId(item.center_id) ||
+          normalizeEntityId(item.center?._id) ||
+          normalizeEntityId(item.center?.id) ||
+          normalizeEntityId(item.center),
         location: item.location || item.address || "",
         male: item.male_count || item.male || 0,
         female: item.female_count || item.female || 0,
         total: item.total_voters || item.total || 0,
-        desksCount: item.number_of_desks || item.numbers_desks || 0
+        desksCount: item.number_of_desks || item.numbers_desks || 0,
+        deskType:
+          type === "desk" && (item.type === "male" || item.type === "female") ? item.type : "",
       });
     } else {
       setFormData({
@@ -270,6 +311,7 @@ export default function InfrastructureSetup() {
         female: 0,
         total: 0,
         desksCount: 0,
+        deskType: "",
       });
     }
     setIsModalOpen(true);
@@ -360,16 +402,32 @@ export default function InfrastructureSetup() {
         setCentersData([]);
         setWilayasData([]);
       } else if (modalType === "desk") {
-        if (!formData.num || !formData.centerId) {
-          alert("Please fill all required fields (Desk Number and Center)");
+        if (!formData.num || !formData.centerId || !formData.deskType) {
+          alert(
+            language === "ar"
+              ? "يرجى ملء جميع الحقول المطلوبة (رقم المكتب، المركز، النوع)"
+              : "Veuillez remplir tous les champs requis (N° bureau, centre, type)"
+          );
+          return;
+        }
+        const centerRow = scopedCentersForDesk.find((c) => {
+          const cId = normalizeEntityId(c._id) || normalizeEntityId(c.id);
+          return cId === normalizeEntityId(formData.centerId);
+        });
+        if (!centerRow?.wilaya_id || !centerRow?.commune_id) {
+          alert(
+            language === "ar"
+              ? "المركز المختار غير صالح أو ناقص البيانات الجغرافية"
+              : "Centre invalide ou données géographiques manquantes"
+          );
           return;
         }
         const body = {
           desk_number: parseInt(formData.num) || 0,
           center: formData.centerId,
-          male_count: parseInt(formData.male as any) || 0,
-          female_count: parseInt(formData.female as any) || 0,
-          total_voters: (parseInt(formData.male as any) || 0) + (parseInt(formData.female as any) || 0),
+          type: formData.deskType,
+          wilaya: centerRow.wilaya_id,
+          commune: centerRow.commune_id,
         };
         if (editingItem) {
           await mutation.mutate("PUT", `/desks/${editingItem._id || editingItem.id}`, body);
@@ -385,15 +443,15 @@ export default function InfrastructureSetup() {
   };
 
   const communeFilterWilaya = useMemo(
-    () => wilayasData.find((w) => String(w.id) === String(communeWilayaFilter)),
-    [wilayasData, communeWilayaFilter]
+    () => wilayasData.find((w) => String(w._id || w.id) === String(selectedWilayaId)),
+    [wilayasData, selectedWilayaId]
   );
 
   const openCommunesForWilaya = (wilayaRow: { id?: string; _id?: string; name?: string }) => {
     if (!isSuperAdmin) return;
     const id = String(wilayaRow._id || wilayaRow.id || "");
     if (!id) return;
-    setCommuneWilayaFilter(id);
+    setSelectedWilayaId(id);
     setActiveTab("communes");
   };
 
@@ -442,6 +500,28 @@ export default function InfrastructureSetup() {
 
         <motion.div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
           {isSuperAdmin && (
+            <div className="min-w-[220px] sm:min-w-[260px]">
+              <select
+                value={selectedWilayaId}
+                onChange={(e) => setSelectedWilayaId(e.target.value)}
+                className="h-12 w-full px-4 rounded-2xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-[11px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-algerian-green/20"
+              >
+                <option value="">
+                  {language === "ar" ? "كل الولايات" : "Toutes les wilayas"}
+                </option>
+                {wilayasData
+                  .slice()
+                  .sort((a, b) => (Number(a.wilaya_code) || 0) - (Number(b.wilaya_code) || 0))
+                  .map((w) => (
+                    <option key={String(w._id || w.id)} value={String(w._id || w.id)}>
+                      {w.num_wilaya ? `${w.num_wilaya} - ` : ""}
+                      {w.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+          {isSuperAdmin && (
             <>
           <button
             type="button"
@@ -485,10 +565,7 @@ export default function InfrastructureSetup() {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => {
-              if (tab.id !== "communes") setCommuneWilayaFilter(null);
-              setActiveTab(tab.id);
-            }}
+            onClick={() => setActiveTab(tab.id)}
             className={cn(
               "flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 p-2 md:px-6 md:py-3 rounded-[18px] text-[8px] md:text-xs font-black uppercase tracking-tight md:tracking-widest transition-all duration-500 relative",
               activeTab === tab.id
@@ -599,7 +676,15 @@ export default function InfrastructureSetup() {
                     onChange={(e) => setFormData({...formData, wilayaId: e.target.value, communeId: ""})}
                   >
                     <option value="">{language === 'ar' ? 'اختر...' : 'Choisir...'}</option>
-                    {scopedWilayasForForm.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    {scopedWilayasForForm.map((w) => {
+                      const wId = wilayaEntityId(w);
+                      return (
+                        <option key={wId} value={wId}>
+                          {w.num_wilaya ? `${w.num_wilaya} - ` : ""}
+                          {w.name}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -611,7 +696,14 @@ export default function InfrastructureSetup() {
                     onChange={(e) => setFormData({...formData, communeId: e.target.value})}
                   >
                     <option value="">{language === 'ar' ? 'اختر...' : 'Choisir...'}</option>
-                    {visibleCommunes.filter(c => String(c.wilaya_id || c.wilaya) === String(formData.wilayaId)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {communesForCenterForm.map((c) => {
+                      const cId = normalizeEntityId(c._id) || normalizeEntityId(c.id);
+                      return (
+                        <option key={cId} value={cId}>
+                          {c.name}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -652,28 +744,39 @@ export default function InfrastructureSetup() {
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'المركز الرئيسي' : 'Centre Parent'}</label>
                 <select className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.centerId} onChange={(e) => setFormData({...formData, centerId: e.target.value})}>
                   <option value="">{language === 'ar' ? 'اختر مركزًا' : 'Sélectionner un Centre'}</option>
-                  {scopedCentersForDesk.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {scopedCentersForDesk.map((c) => {
+                    const cId = normalizeEntityId(c._id) || normalizeEntityId(c.id);
+                    return (
+                      <option key={cId} value={cId}>
+                        {c.name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'رقم المكتب' : 'N° du Bureau'}</label>
                 <input required type="text" pattern="[0-9]*" inputMode="numeric" placeholder="Ex: 01" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.num} onChange={(e) => setFormData({...formData, num: e.target.value.replace(/\D/g, "")})} />
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-zinc-500 uppercase">H</label>
-                  <input required type="number" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.male} onChange={(e) => setFormData({...formData, male: parseInt(e.target.value) || 0})} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-zinc-500 uppercase">F</label>
-                  <input required type="number" className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.female} onChange={(e) => setFormData({...formData, female: parseInt(e.target.value) || 0})} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-zinc-500 uppercase">Total</label>
-                  <div className="w-full h-12 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center text-algerian-green font-black border border-zinc-200 dark:border-zinc-700">
-                    {formData.male + formData.female}
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                  {language === "ar" ? "نوع المكتب" : "Type de bureau"}
+                </label>
+                <select
+                  required
+                  className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold"
+                  value={formData.deskType}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      deskType: e.target.value as "" | "male" | "female",
+                    })
+                  }
+                >
+                  <option value="">{language === "ar" ? "اختر النوع..." : "Choisir le type..."}</option>
+                  <option value="male">{language === "ar" ? "ذكور (رجال)" : "Hommes"}</option>
+                  <option value="female">{language === "ar" ? "إناث (نساء)" : "Femmes"}</option>
+                </select>
               </div>
             </div>
           )}
@@ -750,7 +853,7 @@ export default function InfrastructureSetup() {
 
             {activeTab === "communes" && canManageCommunes && (
               <>
-              {communeWilayaFilter && communeFilterWilaya && (
+              {selectedWilayaId && communeFilterWilaya && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3">
                   <p className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
                     {language === "ar"
@@ -760,7 +863,7 @@ export default function InfrastructureSetup() {
                   {isSuperAdmin && (
                   <button
                     type="button"
-                    onClick={() => setCommuneWilayaFilter(null)}
+                    onClick={() => setSelectedWilayaId("")}
                     className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:underline"
                   >
                     {language === "ar" ? "إظهار الكل" : "Afficher tout"}
@@ -834,23 +937,29 @@ export default function InfrastructureSetup() {
                     render: (val: any) => <span className="text-zinc-900 dark:text-white font-black tracking-tight">{val}</span>,
                   },
                   {
+                    header: language === 'ar' ? 'البلدية' : "Commune",
+                    accessor: "commune",
+                    exportValue: (row) => String(row.commune || ""),
+                    render: (val: any) => <span className="font-bold text-zinc-600 dark:text-zinc-300">{val || "—"}</span>,
+                  },
+                  {
                     header: language === 'ar' ? 'الموقع' : "Localisation",
                     accessor: "location",
                     exportValue: (row) => String(row.location || ""),
                     render: (val: any) => <span className="text-[11px] font-medium text-zinc-500">{val}</span>,
                   },
                   {
-                    header: language === 'ar' ? 'ذ' : "H",
+                    header: language === 'ar' ? 'مكاتب ذكور' : "Bureaux H",
                     accessor: "male",
                     exportValue: (row) => String(row.male ?? 0),
                   },
                   {
-                    header: language === 'ar' ? 'إ' : "F",
+                    header: language === 'ar' ? 'مكاتب إناث' : "Bureaux F",
                     accessor: "female",
                     exportValue: (row) => String(row.female ?? 0),
                   },
                   {
-                    header: language === 'ar' ? 'إجمالي المسجلين' : "Total Inscrits",
+                    header: language === 'ar' ? 'إجمالي المكاتب' : "Total Bureaux",
                     accessor: "total",
                     exportValue: (row) => String(row.total ?? 0),
                     render: (val: any) => <span className="text-algerian-green font-black">{val?.toLocaleString()}</span>,
@@ -880,26 +989,39 @@ export default function InfrastructureSetup() {
                     render: (val: any) => <span className="text-zinc-900 dark:text-white font-black tracking-tight">{val}</span>,
                   },
                   {
+                    header: language === 'ar' ? 'البلدية' : "Commune",
+                    accessor: "commune",
+                    exportValue: (row) => String(row.commune || ""),
+                    render: (val: any) => <span className="font-bold text-zinc-600 dark:text-zinc-300">{val || "—"}</span>,
+                  },
+                  {
                     header: language === 'ar' ? 'المركز التابع له' : "Centre de Rattachement",
                     accessor: "center",
                     exportValue: (row) => String(row.center || ""),
                     render: (val: any) => <span className="font-bold text-zinc-500">{val}</span>,
                   },
                   {
-                    header: language === 'ar' ? 'ذ' : "H",
-                    accessor: "male",
-                    exportValue: (row) => String(row.male ?? 0),
-                  },
-                  {
-                    header: language === 'ar' ? 'إ' : "F",
-                    accessor: "female",
-                    exportValue: (row) => String(row.female ?? 0),
-                  },
-                  {
-                    header: language === 'ar' ? 'المسجلين' : "Inscrits",
-                    accessor: "total",
-                    exportValue: (row) => String(row.total ?? 0),
-                    render: (val: any) => <span className="text-algerian-green font-black">{val}</span>,
+                    header: language === "ar" ? "النوع" : "Type",
+                    accessor: "type",
+                    exportValue: (row) => String(row.type || ""),
+                    render: (val: any) => (
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-black uppercase tracking-widest",
+                          val === "female"
+                            ? "bg-pink-500/10 text-pink-600 dark:text-pink-400"
+                            : val === "male"
+                              ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                              : "bg-zinc-100 dark:bg-white/5 text-zinc-500"
+                        )}
+                      >
+                        {val === "female"
+                          ? (language === "ar" ? "إناث" : "Femmes")
+                          : val === "male"
+                            ? (language === "ar" ? "ذكور" : "Hommes")
+                            : "—"}
+                      </span>
+                    ),
                   },
                 ]}
                 data={visibleDesks}

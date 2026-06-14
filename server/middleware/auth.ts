@@ -19,6 +19,9 @@ export interface JwtUser {
   role: UserRole;
   wilaya_id?: string;   // scoped for admin_wilaya / admin_commun
   commune_id?: string;  // scoped for admin_commun
+  election_role?: string;  // specific election-day sub-role (observateur_bureau, etc.)
+  center_id?: string;      // assigned center for election-day roles
+  desk_id?: string;        // assigned desk for observateur_bureau
 }
 
 declare global {
@@ -61,6 +64,9 @@ export const requireAuth: RequestHandler = (req, res, next) => {
       role: decoded.role,
       wilaya_id: decoded.wilaya_id,
       commune_id: decoded.commune_id,
+      election_role: decoded.election_role,
+      center_id: decoded.center_id,
+      desk_id: decoded.desk_id,
     };
     return next();
   } catch {

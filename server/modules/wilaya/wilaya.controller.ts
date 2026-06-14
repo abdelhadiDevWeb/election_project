@@ -1,3 +1,4 @@
+import type { RequestHandler } from "express";
 import { Wilaya } from "./wilaya.model";
 import { Commune } from "../commune/commune.model";
 import { makeListHandler, makeGetHandler, makeCreateHandler, makeUpdateHandler, makeDeleteHandler } from "../common/crud.controller";

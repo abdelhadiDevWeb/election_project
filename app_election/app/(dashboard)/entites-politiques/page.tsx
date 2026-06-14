@@ -22,6 +22,27 @@ import { useData } from "../context/DataContext";
 import { useLanguage } from "@/app/context/LanguageContext";
 import { useRef } from "react";
 
+function CandidateAvatar({ row, val }: { row: any; val: string }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (row._id && !imgError) {
+    return (
+      <img 
+        src={`/api/candidats/${row._id}/portrait?t=${new Date().getTime()}`} 
+        alt={val} 
+        className="h-full w-full object-cover" 
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  return (
+    <div className="text-zinc-400">
+      {row.fav ? <Medal size={20} className="text-emerald-500 fill-emerald-500/20" /> : <UserSquare size={20} />}
+    </div>
+  );
+}
+
 export default function EntitesPolitiques() {
   const { 
     wilayasData,
@@ -567,7 +588,20 @@ export default function EntitesPolitiques() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{language === 'ar' ? 'الاتصال' : 'Contact'}</label>
-                  <input required type="text" placeholder="05/06/07..." className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                  <input
+                    required
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    pattern="^0[5-7][0-9]{8}$"
+                    placeholder="05XXXXXXXX"
+                    className="w-full h-12 px-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none text-sm font-bold"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setFormData({ ...formData, phone: digits });
+                    }}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -736,21 +770,7 @@ export default function EntitesPolitiques() {
                   { header: language === 'ar' ? 'المترشح' : "Candidat", accessor: "full_name", render: (val: any, row: any) => (
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {row._id ? (
-                          <img 
-                            src={`/api/candidats/${row._id}/portrait?t=${new Date().getTime()}`} 
-                            alt={val} 
-                            className="h-full w-full object-cover" 
-                            onError={(e) => {
-                              (e.target as any).style.display = 'none';
-                              (e.target as any).parentElement.innerHTML = '<div class="text-zinc-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-square"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-1a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1"/></svg></div>';
-                            }}
-                          />
-                        ) : (
-                          <div className="text-zinc-400">
-                            {row.fav ? <Medal size={20} className="text-emerald-500 fill-emerald-500/20" /> : <UserSquare size={20} />}
-                          </div>
-                        )}
+                      <CandidateAvatar row={row} val={val} />
                       </div>
                       <div className="flex flex-col">
                         <span className="font-black text-zinc-900 dark:text-white tracking-tight leading-tight">{val}</span>

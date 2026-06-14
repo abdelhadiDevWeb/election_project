@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { connectMongo, disconnectMongo } from "../db/mongoose";
 import { Citizen } from "../modules/citizen/citizen.model";
 import { MemberActif } from "../modules/member-actif/member-actif.model";

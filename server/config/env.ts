@@ -1,5 +1,10 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import Joi from "joi";
+
+const envDir = fileURLToPath(new URL("..", import.meta.url));
+config({ path: resolve(envDir, ".env") });
 
 const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid("development", "test", "production").default("development"),
@@ -31,6 +36,21 @@ const envSchema = Joi.object({
   // Redis (recommended for scaling across multiple instances)
   REDIS_URL: Joi.string().uri().optional(),
   REDIS_ENABLED: Joi.boolean().default(false),
+
+  // NetBEOPEN / PlaySMS
+  NETBEOPEN_API_URL: Joi.string().uri().optional(),
+  NETBEOPEN_WEBSERVICES_USERNAME: Joi.string().optional(),
+  NETBEOPEN_WEBSERVICES_TOKEN: Joi.string().optional(),
+  NETBEOPEN_SENDER_ID: Joi.string().allow("").optional(),
+
+  // OTP
+  OTP_EXPIRY_MINUTES: Joi.number().integer().min(1).max(60).default(5),
+  OTP_RATE_LIMIT_MINUTES: Joi.number().integer().min(0).max(60).default(1),
+  OTP_MAX_ATTEMPTS_PER_DAY: Joi.number().integer().min(1).default(100000),
+  OTP_LENGTH: Joi.number().integer().min(4).max(10).default(6),
+  OTP_TYPE: Joi.string().valid("NUMERIC", "ALPHANUMERIC").default("NUMERIC"),
+
+  ROLE_SMS_ENABLED: Joi.boolean().default(true),
 }).unknown(true);
 
 const { value, error } = envSchema.validate(process.env, {
@@ -73,6 +93,25 @@ export const env = {
   redis: {
     enabled: value.REDIS_ENABLED as boolean,
     url: value.REDIS_URL as string | undefined,
+  },
+
+  netbeopen: {
+    apiUrl: value.NETBEOPEN_API_URL as string | undefined,
+    username: value.NETBEOPEN_WEBSERVICES_USERNAME as string | undefined,
+    token: value.NETBEOPEN_WEBSERVICES_TOKEN as string | undefined,
+    senderId: value.NETBEOPEN_SENDER_ID as string | undefined,
+  },
+
+  otp: {
+    expiryMinutes: value.OTP_EXPIRY_MINUTES as number,
+    rateLimitMinutes: value.OTP_RATE_LIMIT_MINUTES as number,
+    maxAttemptsPerDay: value.OTP_MAX_ATTEMPTS_PER_DAY as number,
+    length: value.OTP_LENGTH as number,
+    type: value.OTP_TYPE as "NUMERIC" | "ALPHANUMERIC",
+  },
+
+  roleSms: {
+    enabled: value.ROLE_SMS_ENABLED as boolean,
   },
 };
 

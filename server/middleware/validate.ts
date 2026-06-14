@@ -5,7 +5,7 @@ export function validate(schema: Joi.ObjectSchema): RequestHandler {
   return (req, res, next) => {
     const { error, value } = schema.validate(
       { body: req.body, query: req.query, params: req.params, headers: req.headers },
-      { abortEarly: false, allowUnknown: true, stripUnknown: true }
+      { abortEarly: false, allowUnknown: true, stripUnknown: true, convert: true }
     );
 
     if (error) {
